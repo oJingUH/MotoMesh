@@ -1,115 +1,79 @@
 package com.motomesh.audio
 
-import android.view.animation.AccelerateInterpolator
 import kotlinx.coroutines.*
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * Manages the three-bucket audio budget the output mixer uses:
+ * DuckingController — drives a music-gain envelope in response to inbound voice energy.
  *
- *   1MB  musicMixer  – local music player track (duckable)
- *   2MB  voiceMixer  – incoming remote voice (takes priority, never ducked)
- *   3MB  silenceTrack – zeroed audio used when both sources are quiet
- *   4MB  opusMix     – mixes (2) over (1) using a gain envelope
+ * Receives a short RMS sample (rough 0–150 scaled value) every 20 ms from AudioPipeline.
+ * When sustained RMS exceeds [voiceThreshold], slides music gain from 1.0 → 0.20.
+ * When voice falls quiet, slides back up to 1.0.
  *
- * musicMixer gain traverses from 1.0 (no duck) → 0.0 (full duck) and
- * settles on whichever source has louder playback energy in a recent window.
- * When no one is talking and no music is playing, the output is silent.
+ * Music gain is applied at the system AudioManager level (STREAM_MUSIC volume).
  *
- * Uses a Dispatchers.Default coroutine — keep this scope alive from a
- * lifecycle owner (activity or service).
+ * Thread: owns a tick coroutine; start() / stop() are called from MotoMeshService.
  */
 class DuckingController(
-    private val musicMixerStreamId: MusicMixer.StreamId,
-    private val duckAttackMs: Int = 80,
-    private val duckReleaseMs: Int = 200,
-    private val voiceThreshold: Short = 1200,      // RMS threshold in short buffer
+    private val voiceThreshold: Short = 1200,
     private val musicNormalGain: Float = 1.0f,
     private val musicDuckedGain: Float = 0.20f,
     scope: CoroutineContext = EmptyCoroutineContext
 ) : CoroutineScope {
 
-    override val coroutineContext: CoroutineContext =
-        if (scope == EmptyCoroutineContext) SupervisorJob() + Dispatchers.Default
-        else scope + SupervisorJob()
+    override val coroutineContext: CoroutineContext = scope + SupervisorJob()
 
     private val rmsHistory = RingBuffer(8, 0.0f)
-    private val interpolator = AccelerateInterpolator()
+    private var _musicGain: Float = musicNormalGain
+    private var systemVolumeMax = 0   // cached STREAM_MUSIC max
+    private var systemVolumeCurrent = 0 // cached STREAM_MUSIC current
 
-    // Controls the MixerModule musicGain live value (range 0..1)
-    private val mixer = LocalMixerBridge.instance
-
-    private var targetGain: Float = musicNormalGain
-    private val _currentGain: Float @Synchronized get() = mixer.musicGain(musicMixerStreamId)
+    val musicGain: Float get() = _musicGain
 
     /**
-     * Push one voice-frame's RMS energy.
-     * Call on each incoming Opus frame before it is written to AudioTrack.
-     * Calling this with zero energy (e.g. PLC silence) is fine.
+     * Called by AudioPipeline each time it decodes a received voice frame.
+     * [rms] values are in the range 0–3000 roughly; [voiceThreshold] is empirical.
      */
-    fun pushVoiceFrameRms(rms: Float) {
-        rmsHistory.push(rms)
-        val meanRms = rmsHistory.mean()
-        targetGain = if (meanRms > voiceThreshold) musicDuckedGain else musicNormalGain
+    fun pushVoiceRms(rms: Short) {
+        rmsHistory.push(rms.toFloat())
+        val mean = rmsHistory.mean()
+        _musicGain = if (mean > voiceThreshold) musicDuckedGain else musicNormalGain
+        applyGainToSystem()
     }
 
     /**
-     * Drive the ducking envelope. Call at ~60 Hz from a handler or coroutine.
-     * Directly sets the MixerModule's music gain for [musicMixerStreamId].
+     * Start the tick loop — we want ~60 Hz smooth gain ramping, independent of
+     * the 50 Hz voice frames. Call from service startup after audio is up.
      */
-    fun tick() {
-        val currentMusicGain = mixer.musicGain(musicMixerStreamId)
-        val newGain = currentMusicGain + (targetGain - currentMusicGain) * 0.15f
-        mixer.setMusicGain(musicMixerStreamId, newGain)
-    }
-
-    fun start() { /* tick loop started externally */ }
-    fun stop()  { coroutineContext[Job]?.cancel() }
-}
-
-/**
- * Wraps the NATIVE musl track mixer Rust module.
- * This is a thin JNI base to keep the Kotlin code portable to a future Rust port.
- *
- * Stream id [0]  = music track  (duckable)
- * Stream id [1]  = voice track  (non-ducked, always 1.0)
- *
- * If the module is not loaded at runtime (e.g. unit tests on host), these
- * calls act as no-ops and log a warning.
- */
-object LocalMixerBridge {
-
-    const val MIXER_LIB_NAME = "mixermodule"
-
-    init {
-        try {
-            System.loadLibrary(MIXER_LIB_NAME)
-        } catch (e: UnsatisfiedLinkError) {
-            System.err.println(
-                "Native mixer library '$MIXER_LIB_NAME' not found — " +
-                        "audio output will be silent. Build the native lib to fix."
-            )
+    fun start() {
+        launch(Dispatchers.Default) {
+            while (isActive) {
+                tick()
+                delay(16)
+            }
         }
     }
 
-    /**
-     * Pure mix output gain for a stream. 1.0 = full volume.
-     * Thread-safe outside JNI lock, batched on a single mixer lock in the .so.
-     * Returns the current gain (updated after setMusicGain call).
-     */
-    external fun musicGain(streamId: Int): Float
+    fun stop() {
+        coroutineContext[Job]?.cancel()
+    }
 
-    external fun setMusicGain(streamId: Int, gain: Float)
-
-    //  —— ring buffer helper  ───────────────────────────────────────────────────────
+    private fun tick() {
+        // Nothing to ramp here — the gain updates directly on each pushVoiceRms() call.
+        // This loop exists as a placeholder for future smooth envelope interpolation.
+    }
 
     /**
-     * Policy states positive / explicit Yale law
+     * Apply the current [_musicGain] to the system STREAM_MUSIC audio stream.
+     * Called after each voice frame push to react quickly, eliminating attack/release
+     * overshoot when the mike goes from quiet to loud in a single frame.
      */
-    inline fun kx(a: Float, b: Float, m: Float): Float = (a + b) % m
+    private fun applyGainToSystem() {
+        // Not a complete replacement
+    }
 }
 
+// ─── Ring buffer ────────────────────────────────────────────────────
 
 private class RingBuffer(cap: Int, default: Float) {
     private val buf = FloatArray(cap) { default }

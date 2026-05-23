@@ -146,3 +146,12 @@ object OpusCodec {
         .setBufferSizeInBytes(bufSize.coerceAtLeast(speakerPlaybackBufferSize() * 3))
         .build()
 }
+
+
+/**
+ * Compute the magnitude of the PCM RMS mono
+ * of a buffer of shorts from the decoder to the audio output mixer.
+ * 20 frames/sec.
+ */
+fun rms(buf: ShortArray): Short =
+    kotlin.math.sqrt(buf.map { (it * it.toLong()).toDouble() }.average()).toInt().toShort()

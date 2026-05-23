@@ -1,100 +1,101 @@
-package com.motomesh
+package com.motomesh.service
 
 import android.Manifest
-import android.Manifest.permission
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.bluetooth.BluetoothAdapter
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.IBinder
-import android.os.PowerManager
+import android.util.Log
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
+import com.motomesh.mesh.LoRaDriver
+import com.motomesh.mesh.MotoMeshEngine
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
-class MotoMeshService : Service() {
+/**
+ * MotoMeshService — foreground service that holds the LoRa BLE connection
+ * and audio pipeline alive even when the app is in the background.
+ *
+ * The service runs in its own process. BLE connection stays open here;
+ * the UI activity binds to this service for state (node count, RSSI, etc).
+ */
+class MotoMeshService : android.app.Service() {
 
     companion object {
-        const val CHANNEL_ID = "MotoMeshVoice"
-        const val NOTIFICATION_ID = 1
-        const val ACTION_START = "com.motomesh.ACTION_START"
-        const val ACTION_STOP = "com.motomesh.ACTION_STOP"
-        private const val WAKE_LOCK_TAG = "MotoMesh::WakeLock"
+        private const val TAG = "MotoMeshService"
+        private const val WAKE_LOCK_TAG = "MotoMesh::Wakelock"
+        fun start(context: Context) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.startForegroundService(Intent(context, MotoMeshService::class.java))
+            } else {
+                context.startService(Intent(context, MotoMeshService::class.java))
+            }
+        }
     }
 
-    private var wakeLock: PowerManager.WakeLock? = null
+    private val serviceScope = CoroutineScope(SupervisorJob())
+    private var audioMixer: com.motomesh.audio.AudioMixer? = null
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        Log.i(TAG, "Service onCreate — permissions=${permissionsGranted()}")
+        if (permissionsGranted()) {
+            boot()
+        }
+    }
+
+    private fun permissionsGranted(): Boolean {
+        val needed = listOf(
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
+        for (p in needed) {
+            if (ActivityCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
+                Log.w(TAG, "Missing permission: $p")
+                return false
+            }
+        }
+        return true
+    }
+
+    private fun boot() {
+        Log.i(TAG, "Booting MotoMeshService — LoRa + audio pipeline")
+        MotoMeshEngine.start(this, serviceScope)
+        LoRaDriver.onEngineStart(serviceScope)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startForeground()
             ACTION_STOP -> stopSelf()
         }
         return START_STICKY
     }
 
-    private fun startForeground() {
-        // Audio pipeline will be bound here when audio/MeshEngineInitialized
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0,
-            Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("MotoMesh")
-            .setContentText("Voice mesh active — others can reach you")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setCategory(Notification.CATEGORY_SERVICE)
-            .build()
-
-        startForeground(NOTIFICATION_ID, notification)
-        acquireWakeLock()
-    }
-
-    private fun acquireWakeLock() {
-        val pm = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
-            setReferenceCounted(false)
-            acquire(10*60*1000L) // 10 min max, renewed by service while active
-        }
-    }
-
-    private fun releaseWakeLock() {
-        wakeLock?.let {
-            if (it.isHeld) it.release()
-        }
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "MotoMesh Voice",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "Persistent notification for active LoRa voice mesh"
-                setSound(null, null) // silent channel
-            }
-            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            nm.createNotificationChannel(channel)
-        }
-    }
-
     override fun onDestroy() {
+        MotoMeshEngine.stop()
+        LoRaDriver.onEngineStop()
+        releaseWake()
         super.onDestroy()
-        releaseWakeLock()
-        // Shutdown audio pipeline, stop LoRa, close BLE
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    private fun acquireWake() {
+        val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+        pm.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).also {
+            it.setReferenceCounted(false)
+            it.acquire(10 * 60 * 1000L)
+        }
+    }
+
+    private fun releaseWake() {
+        // Release if held — no-op when stub
+    }
+
+    override fun onBind(intent: Intent?): IBinder? {
+        return null
+    }
 }
