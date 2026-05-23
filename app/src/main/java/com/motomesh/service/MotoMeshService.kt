@@ -1,16 +1,12 @@
 package com.motomesh.service
 
 import android.Manifest
-import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.media.AudioManager
-import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.ActivityCompat
-import com.motomesh.mesh.LoRaDriver
 import com.motomesh.mesh.MotoMeshEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -28,17 +24,23 @@ class MotoMeshService : android.app.Service() {
     companion object {
         private const val TAG = "MotoMeshService"
         private const val WAKE_LOCK_TAG = "MotoMesh::Wakelock"
-        fun start(context: Context) {
+
+        @Volatile
+        private var loopbackMode: Boolean = false
+
+        fun start(context: Context, loopback: Boolean = false) {
+            loopbackMode = loopback
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 context.startForegroundService(Intent(context, MotoMeshService::class.java))
             } else {
                 context.startService(Intent(context, MotoMeshService::class.java))
             }
         }
+
+        fun isLoopback(): Boolean = loopbackMode
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob())
-    private var audioMixer: com.motomesh.audio.AudioMixer? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -49,36 +51,45 @@ class MotoMeshService : android.app.Service() {
     }
 
     private fun permissionsGranted(): Boolean {
-        val needed = listOf(
+        // All modes need core perms
+        val alwaysNeeded = listOf(
             Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.BLUETOOTH_CONNECT,
             Manifest.permission.POST_NOTIFICATIONS,
         )
-        for (p in needed) {
+        for (p in alwaysNeeded) {
             if (ActivityCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
                 Log.w(TAG, "Missing permission: $p")
                 return false
             }
         }
+
+        // BT/BLE perms only required when LoRa BLE hardware is active
+        if (!isLoopback()) {
+            val btPerms = listOf(
+                Manifest.permission.BLUETOOTH_CONNECT,
+            )
+            for (p in btPerms) {
+                if (ActivityCompat.checkSelfPermission(this, p) != PackageManager.PERMISSION_GRANTED) {
+                    Log.w(TAG, "Missing permission: $p")
+                    return false
+                }
+            }
+        }
+
         return true
     }
 
     private fun boot() {
-        Log.i(TAG, "Booting MotoMeshService — LoRa + audio pipeline")
-        MotoMeshEngine.start(this, serviceScope)
-        LoRaDriver.onEngineStart(serviceScope)
+        Log.i(TAG, "Booting MotoMeshService — loopback=${isLoopback()}")
+        MotoMeshEngine.start(this, serviceScope, loopback = isLoopback())
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.action) {
-            ACTION_STOP -> stopSelf()
-        }
         return START_STICKY
     }
 
     override fun onDestroy() {
         MotoMeshEngine.stop()
-        LoRaDriver.onEngineStop()
         releaseWake()
         super.onDestroy()
     }

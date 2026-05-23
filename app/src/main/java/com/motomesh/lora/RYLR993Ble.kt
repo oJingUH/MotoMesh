@@ -6,15 +6,18 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothGattService
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
 /**
@@ -50,10 +53,10 @@ object RYLR993Ble {
     private var writeCharacteristic: BluetoothGattCharacteristic? = null
     private var notifyCharacteristic: BluetoothGattCharacteristic? = null
 
-    // Inbound binary packets from the LoRa radio
-    private val _rxPackets = Channel<ByteArray>(Channel.UNLIMITED)
+    // Inbound binary packets from the LoRa radio — null means no packet received
+    private val _rxPackets = MutableStateFlow<ByteArray?>(null)
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
-    val connectionState: Flow<ConnectionState> = _connectionState.asStateFlow()
+    val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
     /**
      * Call at app init from a Context. Acquires the BluetoothAdapter.
@@ -71,11 +74,9 @@ object RYLR993Ble {
 
     /**
      * Connect to a paired RYLR993 device by name prefix (e.g. "RYLR993_").
-     * Bound pairs the device if it appears in the Bluetooth paired list.
-     * Calls onStatus() on the supplied callback as connection progresses.
+     * Blocks até connected or failed. Call from a background thread.
      */
-    @SuppressLint("MissingPermission")
-    suspend fun connect(deviceNamePrefix: String = "RYLR993_") {
+    fun connect(deviceNamePrefix: String = "RYLR993_") {
         _connectionState.value = ConnectionState.CONNECTING
         val adapter = bluetoothAdapter ?: run {
             _connectionState.value = ConnectionState.FAILED
@@ -90,7 +91,6 @@ object RYLR993Ble {
             return
         }
 
-        // gattConnectCallback is a blocking suspend until connected or failed
         val callback = GattConnectCallback()
         gatt = device.connectGatt(null, false, callback)
 
@@ -113,9 +113,9 @@ object RYLR993Ble {
 
     /**
      * Observe inbound binary LoRa payloads from other riders.
-     * Each item is a complete raw packet as decoded by the RYLR993 firmware.
+     * Each item is a raw packet ByteArray or null (no packet this tick).
      */
-    fun rxPackets(): Flow<ByteArray> = _rxPackets.asStateFlow()
+    fun rxPackets(): Flow<ByteArray?> = _rxPackets.asStateFlow()
 
     // ─── Disconnect ─────────────────────────────────────────────
 
@@ -193,10 +193,8 @@ object RYLR993Ble {
         ) {
             if (characteristic.uuid == CHAR_NOTIFY) {
                 characteristic.value?.let { packet ->
-                    // Push into shared channel; it'll be consumed by the mesh layer
-                    kotlinx.coroutines.GlobalScope.launchNow {
-                        _rxPackets.trySend(packet).isSuccess
-                    }
+                    // Push into StateFlow; MeshEngine.rxFrames collects it
+                    _rxPackets.value = packet
                 }
             }
         }
@@ -207,11 +205,6 @@ object RYLR993Ble {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 Log.w(TAG, "Write failed: status=$status")
             }
-        }
-
-        // Helper for fire-and-forget coroutine launch without being inside one
-        private fun <R> kotlinx.coroutines.GlobalScope.launchNow(block: suspend () -> R) {
-            kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.Default) { block() }
         }
     }
 }

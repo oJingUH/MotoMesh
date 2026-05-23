@@ -20,7 +20,7 @@ import java.util.concurrent.LinkedBlockingQueue
  */
 object MotoMeshEngine {
 
-    private const val TAG = "MotoMeshEngine"
+    const val TAG = "MotoMeshEngine"
 
     // ─── State ─────────────────────────────────────────────────────
     private var scope: CoroutineScope? = null
@@ -28,35 +28,43 @@ object MotoMeshEngine {
     // Inbound queue: raw LoRa BLE payloads → AudioPipeline rxLoop
     private val inboundQueue = LinkedBlockingQueue<ByteArray>(256)
 
-    // Outbound queue: AudioPipeline txLoop encodes → LoRaDriver TX
+    // Outbound queue: AudioPipeline txLoop encodes → LoRaDriver → radio
     private val outboundQueue = LinkedBlockingQueue<ByteArray>(512)
 
+    private var loopbackMode: Boolean = false
+    private var localNodeId: Int = 0
+
     // ─── Entry / Exit ───────────────────────────────────────────────
-    fun start(context: Context, parentScope: CoroutineScope) {
+    fun start(context: Context, parentScope: CoroutineScope, loopback: Boolean = false) {
+        this.loopbackMode = loopback
         scope = CoroutineScope(SupervisorJob() + parentScope.coroutineContext)
 
         val tag = TAG  // capture for log lambdas
 
         // Node identity
-        val nodeId = MeshForwarder.assignNodeId()
-        Log.i(tag, "This rider is node $nodeId")
+        localNodeId = MeshForwarder.assignNodeId()
+        Log.i(tag, "This rider is node $localNodeId  loopback=$loopback")
 
-        // Open LoRa and start rx pump
-        LoRaDriver.open(context)
+        if (!loopback) {
+            // Production path: open LoRa BLE and start rx/tx pumps
+            LoRaDriver.open(context)
 
-        // Rx pump: BLE notify → inboundQueue (populated by enqueueInbound)
-        scope!!.launch(Dispatchers.Default) {
-            LoRaDriver.rxFrames.collect { raw ->
-                enqueueInbound(raw)
+            // Rx pump: BLE notify → inboundQueue
+            scope!!.launch(Dispatchers.Default) {
+                LoRaDriver.rxFrames.collect { raw ->
+                    raw?.let { enqueueInbound(it) }
+                }
             }
-        }
 
-        // Tx pump: drain outboundQueue → LoRaDriver.sendPacket()
-        scope!!.launch(Dispatchers.Default) {
-            while (isActive) {
-                val packet = outboundQueue.take()
-                LoRaDriver.sendPacket(packet)
+            // Tx pump: drain outboundQueue → LoRaDriver.sendPacket()
+            scope!!.launch(Dispatchers.Default) {
+                while (isActive) {
+                    val packet = outboundQueue.take()
+                    LoRaDriver.sendPacket(packet)
+                }
             }
+        } else {
+            Log.i(tag, "Loopback mode — LoRa BLE stack skipped; tx rxLoop is self-bound")
         }
     }
 
@@ -70,10 +78,16 @@ object MotoMeshEngine {
 
     // ─── Public API ─────────────────────────────────────────────────
 
-    /** Called by AudioPipeline txLoop — schedule one voice frame for broadcast. */
+    /** Called by AudioPipeline txLoop — schedule one voice frame for broadcast or loopback. */
     fun txFrame(opusPayload: ByteArray) {
-        val packet = MeshForwarder.buildOutbound(opusPayload)
-        outboundQueue.offer(packet)
+        if (loopbackMode) {
+            // Direct ringback: encoded frame goes straight into the inbound queue
+            // that rxLoop is already polling. Zero latency, no GATT, no radio.
+            inboundQueue.offer(opusPayload)
+        } else {
+            val packet = MeshForwarder.buildOutbound(opusPayload)
+            outboundQueue.offer(packet)
+        }
     }
 
     /** Polled by AudioPipeline rxLoop — returns next inbound Opus frame or null (PLC). */

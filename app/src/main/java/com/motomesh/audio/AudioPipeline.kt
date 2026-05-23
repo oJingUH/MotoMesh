@@ -33,7 +33,7 @@ class AudioPipeline(
 
     private var record: AudioRecord? = null
     private var track: AudioTrack? = null
-    private var jitter = JitterBuffer(config.frameMs, 50)
+    private val jitter = JitterBuffer(config.frameMs, 50)
     private val pcmBuf = ShortArray(config.frameSamples)
     private val encodedBuf = ByteArray(OpusCodec.MAX_PAYLOAD)
 
@@ -73,7 +73,8 @@ class AudioPipeline(
             for (i in 0 until config.frameSamples) {
                 pcmBuf[i] = ((raw[i * 2 + 1].toInt() shl 8) or (raw[i * 2].toInt() and 0xFF)).toShort()
             }
-            val encoded = OpusCodec.encodeFrame(pcmBuf) ?: run { delay(config.frameMs.toLong()); continue }
+            val encoded = OpusCodec.encodeFrame(pcmBuf)
+            if (encoded == null) { delay(config.frameMs.toLong()); continue }
             com.motomesh.mesh.MotoMeshEngine.txFrame(encoded)
             delay(config.frameMs.toLong())
         }
@@ -87,27 +88,27 @@ class AudioPipeline(
 
             // No packet this tick → pull whatever is buffered (includes PLC)
             val frame = if (packet != null) {
-                val samples = OpusCodec.decodeFrame(packet)
-                if (samples.isNotEmpty()) {
-                    jitter.pushFrame(packet, rms(samples))
+                val sampleBurst = OpusCodec.decodeFrame(packet)
+                if (sampleBurst.isNotEmpty()) {
+                    jitter.pushFrame(packet, rms(sampleBurst))
                     jitter.pullFrame()
                 } else null
             } else {
                 jitter.pullFrame()
             }
 
-            val opus = frame ?: run {
-                // PLC silence frame
+            if (frame == null) {
+                // PLC silence frame — no decoded speech available
                 track!!.write(ShortArray(config.frameSamples) { 0 }, 0, config.frameSamples)
                 delay(config.frameMs.toLong())
                 continue
             }
 
-            val samples = OpusCodec.decodeFrame(opus)
-            if (samples.isNotEmpty()) {
-                val rms = rms(samples)
-                onRms(rms)           // DuckingController ← frame energy
-                track!!.write(samples, 0, samples.size)
+            // frame is already ShortArray PCM from jitter / decode — write straight out
+            if (frame.isNotEmpty()) {
+                val rmsVal = rms(frame)
+                onRms(rmsVal)           // DuckingController ← frame energy
+                track!!.write(frame, 0, frame.size)
             }
             delay(config.frameMs.toLong())
         }

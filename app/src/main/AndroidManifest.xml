@@ -15,8 +15,8 @@
     <uses-permission android:name="android.permission.CAPTURE_AUDIO_OUTPUT" />
     <!-- USB OTG fallback if BLE pairing isn't used -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
-    <!-- BLE required — this app needs BLE to talk to the RYLR993 module -->
-    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+    <!-- BLE — required for production LoRa path; loopback mode bypasses this -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
     <application
         android:allowBackup="false"

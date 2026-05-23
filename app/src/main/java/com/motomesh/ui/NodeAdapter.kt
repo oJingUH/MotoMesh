@@ -6,8 +6,8 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-// handling inside function
 import com.motomesh.mesh.NodeRecord
+import com.motomesh.databinding.ItemNodeBinding
 
 /**
  * NodeAdapter — binds [NodeRecord] snapshots from NodeTable into the RecyclerView.

@@ -2,11 +2,11 @@ package com.motomesh.lora
 
 import android.content.Context
 import android.util.Log
-import com.motomesh.BuildConfig
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.GlobalScope
 
 /**
  * LoRaDriver — connection state + send path bridging RYLR993Ble and the rest of the app.
@@ -79,7 +79,7 @@ object LoRaDriver {
      * StateFlow of raw inbound packets as they arrive from the radio over BLE GATT Notify.
      * Each item is a complete packet byte array.
      */
-    val rxFrames: StateFlow<ByteArray?> = RYLR993Ble.rxPackets().let { flow -> flow as StateFlow<ByteArray?> }
+    val rxFrames: StateFlow<ByteArray?> = RYLR993Ble.rxPackets() as StateFlow<ByteArray?>
 
     /**
      * Disconnect; resets state to DISCONNECTED.

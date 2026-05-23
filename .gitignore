@@ -79,3 +79,8 @@ obj/
 
 # Custom
 MotoMesh/.gitignore
+
+# Local JDK configuration
+gradle.properties
+# Local Gradle CLI jars (project-local wrapper)
+lib/

@@ -36,6 +36,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        dataBinding = true
     }
 }
 
@@ -45,11 +46,8 @@ dependencies {
     implementation("androidx.activity:activity-ktx:1.9.0")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
 
-    // Opus codec — Concentus
-    implementation("com.github.JetBrains:concentus:0.1.0-android")
-
-    // BLE
-    implementation("androidx.bluetooth:bluetooth:1.1.0")
+    // Opus codec — uses Android built-in MediaCodec Opus (API 24+)
+    // Ref: https://developer.android.com/guide/topics/media/media-codec
 
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6.2")

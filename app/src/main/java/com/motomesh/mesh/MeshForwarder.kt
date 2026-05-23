@@ -137,34 +137,4 @@ object MeshForwarder {
         return kotlin.math.sqrt(sum.toDouble() / buf.size).toInt().toShort()
     }
 
-// ─── Node helpers ──────────────────────────────────────────────────────────
-
-data class NodeRecord(
-    val nodeId: Int,
-    val rssi: Int,
-    var lossRate: Float = 0f,
-    var lastSeenMs: Long = System.currentTimeMillis()
-) {
-    val isAlive: Boolean
-        get() = (System.currentTimeMillis() - lastSeenMs) < 80_000L
-}
-
-object NodeRecord {
-    fun snapshotOnly(): List<NodeRecord> = emptyList() // stub: reachable via MeshForwarder
-}
-
-object NodeTable {
-    private val lock = Any()
-    private val nodes = java.util.HashMap<Int, NodeRecord>()
-    fun touch(nodeId: Int, rssi: Int) = synchronized(lock) {
-        nodes[nodeId] = NodeRecord(nodeId, rssi)
-    }
-    fun markIdle(nodeId: Int, rssi: Int, plc: Float) = synchronized(lock) {
-        val prev = nodes[nodeId]
-        nodes[nodeId] = prev?.copy(lastSeenMs = System.currentTimeMillis(), lossRate = plc) ?: NodeRecord(nodeId, rssi)
-    }
-    fun purgeStale() = synchronized(lock) { nodes.values.removeIf { !it.isAlive } }
-    val snapshot: List<NodeRecord>
-        get() = synchronized(lock) { nodes.values.toList() }
-}
 }
