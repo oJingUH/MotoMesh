@@ -111,8 +111,24 @@ MotoMesh solves both: **every bike is an independent node in a radio mesh**, and
 
 ## Project Status
 
-**Phase 1 in progress** — Opus audio loopback, BLE connection scaffolding.
-Expected Phase 2: Single LoRa link (2 phones, 1 module) — ~4 weeks from start.
+**Phase 1 complete** (commit 8a3ffc4) — audio pipeline is fully scaffolded.
+
+### What's done
+- Opus codec wrappers + AudioRecord → Opus → LoRa Tx coroutine loop
+- Jitter buffer + Opus decode → AudioTrack → headphones Rx coroutine loop
+- DuckingController: inbound voice RMS triggers music gain slide from 1.0 → 0.20
+- MeshEngine: inbound/outbound queues, BLE StateFlow → AudioPipeline bridge
+- RYLR993Ble: full GATT driver (write + notify + CCCD)
+- MeshForwarder: TTL=5 flood-gossip, dedup hot-cache, outbound frame builder
+- MotoMeshService: foreground service with wake lock + persistent notification
+- UI: rider list, node count subtitle, per-node RSSI + loss% card
+- Build: Gradle KTS, Concentus Opus dep, MaterialComponents, RecyclerView, ViewBinding
+
+### What's next (Phase 2)
+- LoRa AT command init (channel freq, spreading factor, power)
+- Real-device audio loopback test (no LoRa — just mic→headphones)
+- Single LoRa link (2 phones + 1 RYLR993) — 2–3 week backlog
+
 
 ---
 

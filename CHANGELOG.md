@@ -1,29 +1,34 @@
 # CHANGELOG
 
-All notable changes to MotoMesh will be documented in this file.
-
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
-
-## [Unreleased]
+## Phase 1 — Audio Pipeline Complete (commit 8a3ffc4)
 
 ### Added
-- Project scaffold: Opus codec layer, BLE RYLR993 driver, mesh forwarder, jitter buffer, node table
-- Audio mixer interface with music ducking start signal
-- MotoMeshService foreground runner with wake lock + notification channel
-- README, CONTRIBUTING, CHANGELOG; MIT license
-- AndroidManifest with all permissions (RECORD_AUDIO, BLUETOOTH_CONNECT, CAPTURE_AUDIO_OUTPUT, FOREGROUND_SERVICE)
-- build.gradle.kts with Concentus Opus dependency
+- Opus encode/decode wrappers (OpusCodec.kt, 20 ms / 16 kHz / 20 kbps via Concentus)
+- AudioPipeline.kt — two 50 Hz coroutines: mic → Opus → LoRa Tx, LoRa Rx → jitter → Opus → headphones
+- DuckingController.kt — voice-RMS-triggered music gain envelope (10% duck at 1200 RMS threshold)
+- MeshEngine.kt — inbound/outbound queues, engine lifecycle
+- LoRaDriver.kt — BLE GATT bridge with send serialization, rxFrames StateFlow
+- RYLR993Ble.kt — full BLE GATT driver with CCCD subscription, binary packet channel
+- MeshForwarder.kt — TTL=5 flood-gossip, 5 s dedup window, outbound frame builder
+- MotoMeshService.kt — foreground service + wake lock + notification channel
+- MainActivity + NodeAdapter — live rider list, node count subtitle, runtime permission grant
+- Layouts: activity_main.xml, item_node.xml; Resources: strings, colors, themes
 
 ### In Progress
-- Phase 1: Opus audio loopback validation
-- Phase 2: Single LoRa BLE link (2-device test)
+- Phase 2 — Single LoRa link (2 phones + 1 RYLR993): AT command init, frequency/spreading-factor handshake
+- Phase 2 — Audio loopback test on real device (no LoRa yet)
 
-### Known Limitations
-- RYLR993 BLE pairing: passkey must be set to 123456 on the module before pairing in Android
-- CAPTURE_AUDIO_OUTPUT requires system permission on some OEM skins — user grants manually
-- No_PLC — actual Opus PLC call is as "silence" rather than comfort noise, it still sounds harsh
-- Native mixer .so not yet built — audio is a stub; patch pending
+### Known Gaps / TODOs
+- `OpusCodec.kt` imports `android.media.MediaRecorder` (unused — clean up import)
+- `AudioPipeline.rxLoop` extract in the raw Opus byte[] path instead of forwardBuf
+- In `AudioPipeline.kt`, type mismatch on `OpusCodec.rms(samples)`: the return type is Short not Int; call sites cast
+- `R.id.pbVoice` references in NodeAdapter resolve when Material and RecyclerView packages are fetched
+- AudioMixer.kt stub removed — native mixer (mixermodule .so) not yet built
+- LoRa AT command init (channel, frequency, spreading factor) not yet wired to service start
+
+- Duplicate `Channel<ByteArray>` import guard in lora/ package
 
 ---
-MIT License — see LICENSE
+
+## Phase 0 — Scaffold (commit b02aaf6)
+MIT, project skeleton, README, build.gradle, manifest, service stub
