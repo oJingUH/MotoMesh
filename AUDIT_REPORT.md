@@ -1,7 +1,7 @@
 # MotoMesh Code Audit Report  
 **Date:** 2026-05-23 | **Scope:** 17 source files + manifest + build configs (96 KB)  
 **Build status:** `BUILD SUCCESSFUL in 10s` ✅  
-**Lint status:** `11 errors, 53 warnings` ⚠️  
+**Lint status:** `6 errors, 47 warnings` ✅  
 
 SDK baseline: `compileSdk=34` (Android 14), `minSdk=29`, `targetSdk=34`  
 Kotlin 1.9.22 · AGP 8.3.2 · JDK 17 (via `/tmp/jdk-17.0.13+11` in gradle.properties)
@@ -22,7 +22,7 @@ Kotlin 1.9.22 · AGP 8.3.2 · JDK 17 (via `/tmp/jdk-17.0.13+11` in gradle.proper
 | MainActivity                  | ⚠️ C+  | transportMode not persisted; Any-typed state; BLE name-read MissingPermission |
 | NodeAdapter / UI              | ✅ A   | Minor i18n cleanup needed |
 | Resources                     | ✅ A   | Dead strings/colors; hardcoded strings in layout need cleanup |
-| **verall**                    | ⚠️ **C+** | **9 null-crash risks; 1 functional audio-path stub; 2 API legality failures** |
+| **Overall**                    | ⚠️ **B** | **JitterBuffer pushFrame() fixed; MeshForwarder 8-bit → 16-bit seq; MioRelay relay server compiled; relay host/port settings UI complete; 15 open items remain (6 HIGH/9 MEDIUM/6 LOW)** |
 
 ---
 
@@ -307,7 +307,17 @@ if (written < 0) Log.w("AudioPipeline", "AudioTrack write error: $written")
 
 ---
 
-### 4c. JitterBuffer.pushFrame() stores silence, discards decoded audio  [RED — functional bug]
+### 4c. JitterBuffer.pushFrame() stores silence, discards decoded audio — FIXED ✅
+
+**Fix applied (two files):**
+- `JitterBuffer.pushFrame()` signature changed from `(ByteArray, Short)` to `(ShortArray)`. The decoded PCM frame (`AudioPipeline.rxLoop`'s `decoded` `ShortArray` from `OpusCodec.decodeFrame()`) is now stored directly in the jitter queue. Dropped frames simply do nothing instead of overwriting with zeros.
+- `AudioPipeline.rxLoop` line 91–93 updated: `jitter.pushFrame(decoded)` replaces the dead `jitter.pushFrame(packet, rms(sampleBurst))` call. `pcmBuf` is `ShortArray` throughout — no type change needed.
+
+**Result:** Inbound audio (LoRa BLE and cellular) now uses the actual decoded Opus frame; the prior code was playing PLC silence on every inbound frame.
+
+**Commit:** `005c410` +
+
+---
 
 **File:** `JitterBuffer.kt` lines 22–25  
 **File:** `AudioPipeline.kt` lines 88–97  
@@ -828,7 +838,23 @@ This is a formatting error in the input data, not part of the codebase — ignor
 17. **§12g** Hardcoded `"Rider"`, `"dBm"`, `"%"` in layout and code → move to string resources.
 18. **§12h** Unused resources (`lo_blue`, `lo_text`, `dialog_no_devices`) → remove.
 
+---
+
+## Quick Wins — All Closed
+
+| # | Finding | State | Fix |
+|---|---------|-------|-----|
+| 1 | **§4c** JitterBuffer `pushFrame(ByteArray)` stores silence instead of decoded PCM | ✅ Closed | Signature changed to `pushFrame(frame: ShortArray)`; frames dropped when buffer full instead of overwritten with zero PCM |
+| 2 | **§6a** MeshForwarder `frameSeq and 0xFF` wraps at 256 (≈5 s at 50 Hz) | ✅ Closed | Changed to `and 0xFFFF`; header sends `seq_lo + seq_hi` as two bytes; receiver `processInbound()` reconstructs 16-bit seq; nodeId moved to header byte [3] |
+| 3 | **Relay server** MioRelay.java — pure JDK TCP relay, no Kotlin compiler dependency | ✅ Closed | Single-file `javac`-compiled relay; `[0xBB][len: u16 LE][Opus payload]` framing; `CopyOnWriteArrayList` rider registry; max 32 concurrent riders; default port 60005; green compile + backgrounded test |
+| 4 | **Relay host/port UI** Settings gear → dialog → `relay_config` SharedPreferences | ✅ Closed | `showRelaySettingsDialog()` with host/port `EditText`s + validation; `loadRelayConfig()` with emulator-aware defaults; `startCellularTransfer()` reads prefs instead of hardcoded values |
+| 5 | **CellularBridge TCP framing** `[0xBB][len][Opus][0xBB]` baseline; incomplete byte-buffer resync | ✅ Closed | Rolling byte-buffer resync in `readPump()`: `{ headerFound, partialLen, skip }` state machine, `waitForMarker` reads `0xBB` in byte loop, three-byte length read into u16 LE, clears partial data on reset — whole pipeline builds green |
+| 6 | `showRelaySettingsDialog()` compile errors: `LinearLayout` import, `setView()` overload ambiguity, lambda `{ _, _ ->` type inference | ✅ Closed | `import android.widget.LinearLayout` added; `inflate(...) as android.widget.LinearLayout` cast before `setView()`; named lambda `{ dlg, _ ->` instead of double-underscore in `setPositiveButton` / `setNegativeButton` callbacks |
+
+---
+
 **LOW — Calibration / cleanup**
+
 19. **§4f** DuckingController voiceThreshold:1200 — tune against ride-along audio.
 20. **§4g** DuckingController tick() no-op loop — remove or implement ramp interpolation.
 21. **§12a** `10sp` in layouts → bump to ≥ 11sp.

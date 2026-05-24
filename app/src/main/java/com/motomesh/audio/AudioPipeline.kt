@@ -88,9 +88,9 @@ class AudioPipeline(
 
             // No packet this tick → pull whatever is buffered (includes PLC)
             val frame = if (packet != null) {
-                val sampleBurst = OpusCodec.decodeFrame(packet)
-                if (sampleBurst.isNotEmpty()) {
-                    jitter.pushFrame(packet, rms(sampleBurst))
+                val decoded = OpusCodec.decodeFrame(packet)
+                if (decoded.isNotEmpty()) {
+                    jitter.pushFrame(decoded)
                     jitter.pullFrame()
                 } else null
             } else {

@@ -170,16 +170,28 @@
                 android:textColor="#8B949E"
                 android:textSize="11sp" />
 
-            <View
-                android:id="@+id/vVox"
-                android:layout_width="6dp"
-                android:layout_height="6dp"
-                android:layout_marginStart="10dp"
-                android:background="#B5FFDA"
-                android:shape="oval"
-                android:visibility="gone" />
+        <View
+            android:id="@+id/vVox"
+            android:layout_width="6dp"
+            android:layout_height="6dp"
+            android:layout_marginStart="10dp"
+            android:background="#B5FFDA"
+            android:shape="oval"
+            android:visibility="gone" />
 
-        </LinearLayout>
+        <!-- Settings gear: opens relay host + port dialog when in CELLULAR mode -->
+
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="8dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/settings_desc"
+            app:srcCompat="@drawable/ic_settings_gear"
+            app:tint="#8B949E" />
+
+    </LinearLayout>
 
     </LinearLayout>
 

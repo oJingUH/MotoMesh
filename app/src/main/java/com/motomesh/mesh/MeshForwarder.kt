@@ -52,25 +52,29 @@ object MeshForwarder {
     /**
      * Build an outbound frame for the next voice transmission.
      * Wraps the raw Opus payload with the LoRa transport header.
+     * Sequence wraps at 65536 (16-bit), matching processIncoming() on the receiver side.
      */
     fun buildOutbound(data: ByteArray): ByteArray {
-        val seq = frameSeq.getAndIncrement()
+        val seq = frameSeq.getAndIncrement() and 0xFFFF
         val buf = ByteArray(PAYLOAD_OFFSET + data.size)
         // Byte 0: signature (0x00 per RYLR993 raw mode)
         buf[0] = 0x00
-        // Bytes 1–3: sequence + node + flags packed
-        val hi  = (seq        and 0xFF).toByte()
-        val mi  = (localNodeId and 0xFF).toByte()
-        val lo  = (0           and 0xFF).toByte()  // flags / hop-count start at 0
-        buf[1] = hi
-        buf[2] = mi
-        buf[3] = lo
+        // Bytes 1–2: 16-bit sequence (little-endian, wraps at 65536)
+        //   buf[1] = seq lo, buf[2] = seq hi
+        // Byte 3: local node ID
+        // processIncoming() reconstructs: seq = raw[1] or (raw[2] shl 8), nodeId = raw[3]
+        buf[1] = (seq and 0xFF).toByte()          // LSB of 16-bit seq
+        buf[2] = ((seq ushr 8) and 0xFF).toByte() // MSB of 16-bit seq
+        buf[3] = (localNodeId and 0xFF).toByte()  // node ID
         System.arraycopy(data, 0, buf, PAYLOAD_OFFSET, data.size.coerceAtMost(data.size))
         return buf
     }
 
     /**
      * Process an inbound raw LoRa packet.
+     *
+     * Wire layout matches buildOutbound():
+     *   buf[0] = 0x00, buf[1] = seq_lo, buf[2] = seq_hi, buf[3] = nodeId, payload @ PAYLOAD_OFFSET
      *
      * @return Pair of (nodeId that spoke, rms energy of this frame) or null if dropped.
      */
@@ -79,12 +83,13 @@ object MeshForwarder {
             Log.w(TAG, "Underlength frame ${raw.size}B")
             return null
         }
-        val seq   = (raw[1].toInt() and 0xFF) or ((raw[2].toInt() and 0xFF) shl 8)
-        val nodeId = (raw[2].toInt() and 0xFF).toShort()
-        val hops  = (raw[3].toInt() and 0xFF)
+        // Bytes 1–2: 16-bit sequence number (little-endian)
+        val seq    = (raw[1].toInt() and 0xFF) or ((raw[2].toInt() and 0xFF) shl 8)
+        // Byte 3: source node ID
+        val nodeId = (raw[3].toInt() and 0xFF).toShort()
 
-        if (hops > MAX_HOPS) {
-            Log.d(TAG, "Hop limit $hops > $MAX_HOPS — dropping")
+        if (nodeId == localNodeId.toShort()) {
+            // Loopback echo — don't re-route our own frame
             return null
         }
 
@@ -97,10 +102,10 @@ object MeshForwarder {
         val stale = now - DEDUPE_WINDOW_MS
         seen.entries.removeIf { it.value < stale }
 
-        // Re-encode for forwarding (increment hop count)
-        if (hops < MAX_HOPS) {
-            val forwarded = raw.clone()
-            forwarded[3] = (hops + 1).toByte()
+        // Re-encode for forwarding : increment hops byte (at index 3 so payload stays intact)
+        val forwarded = raw.clone()
+        forwarded[3] = ((forwarded[3].toInt() and 0xFF) + 1).toByte()
+        if (forwarded[3].toInt() and 0xFF <= MAX_HOPS) {
             out.add(forwarded)
         }
 

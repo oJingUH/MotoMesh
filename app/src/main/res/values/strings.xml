@@ -38,4 +38,10 @@
     <!-- Rider icon content description -->
     <string name="rider_icon_desc">Rider node</string>
 
+    <!-- Relay settings dialog -->
+    <string name="settings_desc">Relay settings</string>
+    <string name="settings_relay_title">Relay server</string>
+    <string name="settings_relay_host_hint">Relay host (e.g. 10.0.2.2)</string>
+    <string name="settings_relay_port_hint">Relay port (e.g. 60005)</string>
+
 </resources>

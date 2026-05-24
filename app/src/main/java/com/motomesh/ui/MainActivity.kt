@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.widget.ArrayAdapter
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -87,6 +88,7 @@ class MainActivity : ComponentActivity() {
 
         setupRecycler()
         setupButtons()
+        setupSettingsButton()
         requestPermissions(transportMode)
         MotoMeshService.start(this, transport = transportMode)
         updateConnectButton()
@@ -267,6 +269,55 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun setupSettingsButton() {
+        b.btnSettings.setOnClickListener {
+            showRelaySettingsDialog()
+        }
+    }
+
+    private fun loadRelayConfig(): Pair<String, Int> {
+        val prefs = getSharedPreferences("relay_config", MODE_PRIVATE)
+        val defaultHost = if (android.os.Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
+        val host = prefs.getString("relay_host", defaultHost) ?: defaultHost
+        val port = prefs.getInt("relay_port", 60005)
+        return host to port
+    }
+
+    private fun showRelaySettingsDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(
+            R.layout.dialog_relay_config, null
+        ) as android.widget.LinearLayout
+
+        val etHost = dialogView.findViewById<android.widget.EditText>(R.id.etRelayHost)
+        val etPort = dialogView.findViewById<android.widget.EditText>(R.id.etRelayPort)
+
+        // Pre-fill current config
+        val (currentHost, currentPort) = loadRelayConfig()
+        etHost.setText(currentHost)
+        etPort.setText(currentPort.toString())
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.settings_relay_title)
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok) { dlg, _ ->
+                val newHost = etHost.text.toString().trim()
+                val newPort = etPort.text.toString().toIntOrNull()
+                if (newHost.isEmpty() || newPort == null || newPort !in 1..65535) {
+                    Toast.makeText(this, "Invalid host or port", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                getSharedPreferences("relay_config", MODE_PRIVATE).edit()
+                    .putString("relay_host", newHost)
+                    .putInt("relay_port", newPort)
+                    .apply()
+                Toast.makeText(this, "Relay saved: $newHost:$newPort", Toast.LENGTH_SHORT).show()
+                dlg.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel) { dlg, _ -> dlg.cancel() }
+            .create()
+            .show()
+    }
+
     // ─── Transport transitions ───────────────────────────────────────
 
     private fun transitionToLoRa() {
@@ -383,11 +434,11 @@ class MainActivity : ComponentActivity() {
     // ─── Cellular transport stubs ──────────────────────────────────────
 
     private fun startCellularTransfer() {
-        // Phase 3: default relay = Android emulator host loopback; real device = actual relay IP
-        val relayHost = if (android.os.Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
+        if (CellularBridge.cellularState.value != CellularBridge.CellularState.IDLE) return
+        val (relayHost, relayPort) = loadRelayConfig()
         CellularBridge.init(this)
-        CellularBridge.connect(relayHost, 60005)
-        Log.i("MainActivity", "startCellularTransfer: connecting to $relayHost:60005  state=${CellularBridge.cellularState.value}")
+        CellularBridge.connect(relayHost, relayPort)
+        Log.i("MainActivity", "startCellularTransfer: connecting to $relayHost:$relayPort  state=${CellularBridge.cellularState.value}")
     }
 
     private fun stopCellular() {
