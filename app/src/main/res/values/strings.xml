@@ -1,4 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">MotoMesh</string>
+
+    <!-- Buttons -->
+    <string name="btn_mute">Mute</string>
+    <string name="btn_unmute">Unmute</string>
+    <string name="btn_connect">Connect LoRa</string>
+
+    <!-- LoRa connection state in the status bar -->
+    <string name="conn_disconnected">Disconnected</string>
+    <string name="conn_connecting">Connecting…</string>
+    <string name="conn_connected">Connected</string>
+    <string name="conn_scanning">Scanning…</string>
+
+    <!-- LoRa mode label in the status bar -->
+    <string name="conn_loopback">Loopback</string>
+    <string name="conn_lora">LoRa</string>
+
+    <!-- Default hints — overwritten at runtime by MainActivity observers -->
+    <string name="hint_rssi" translatable="false">– dBm</string>
+    <string name="hint_nodes" translatable="false">– nodes</string>
+
+    <!-- Permission toasts / dialogs -->
+    <string name="toast_no_ble_devices">No RYLR993 devices found nearby.</string>
+    <string name="dialog_scanning_title">Scanning for LoRa modules</string>
+    <string name="dialog_no_devices">No RYLR993 modules found. Make sure Bluetooth is on and the module is powered up.</string>
+    <!-- Transport connection buttons (loopback entry point dialog) -->
+    <string name="dialog_pick_transport_title">Connect via</string>
+    <string name="transport_lora">LoRa BLE</string>
+    <string name="transport_cellular">Cellular TCP</string>
+
+    <!-- Cellular states in the status bar -->
+    <string name="conn_cellular_connected">Cellular</string>
+    <string name="conn_cellular_failed">Cellular failed — tap to retry</string>
+    <string name="conn_cellular_connecting">Connecting…</string>
+
+    <!-- Rider icon content description -->
+    <string name="rider_icon_desc">Rider node</string>
+
 </resources>

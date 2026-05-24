@@ -1,0 +1,6 @@
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "Write failed: status=$status")
+            }
+        }
+    }
+}

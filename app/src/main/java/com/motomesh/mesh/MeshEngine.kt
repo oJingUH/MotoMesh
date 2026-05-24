@@ -3,6 +3,7 @@ package com.motomesh.mesh
 import android.content.Context
 import android.util.Log
 import com.motomesh.audio.OpusCodec
+import com.motomesh.cellular.CellularBridge
 import com.motomesh.lora.LoRaDriver
 import kotlinx.coroutines.*
 import java.util.concurrent.LinkedBlockingQueue
@@ -31,40 +32,48 @@ object MotoMeshEngine {
     // Outbound queue: AudioPipeline txLoop encodes → LoRaDriver → radio
     private val outboundQueue = LinkedBlockingQueue<ByteArray>(512)
 
-    private var loopbackMode: Boolean = false
+    private var transportMode: TransportMode = TransportMode.LOOPBACK
     private var localNodeId: Int = 0
 
+    enum class TransportMode { LOOPBACK, LORA, CELLULAR }
+
     // ─── Entry / Exit ───────────────────────────────────────────────
-    fun start(context: Context, parentScope: CoroutineScope, loopback: Boolean = false) {
-        this.loopbackMode = loopback
+    fun start(context: Context, parentScope: CoroutineScope, transport: TransportMode = TransportMode.LOOPBACK) {
+        this.transportMode = transport
         scope = CoroutineScope(SupervisorJob() + parentScope.coroutineContext)
 
         val tag = TAG  // capture for log lambdas
 
         // Node identity
         localNodeId = MeshForwarder.assignNodeId()
-        Log.i(tag, "This rider is node $localNodeId  loopback=$loopback")
+        Log.i(tag, "This rider is node $localNodeId  transport=$transport")
 
-        if (!loopback) {
-            // Production path: open LoRa BLE and start rx/tx pumps
-            LoRaDriver.open(context)
+        when (transport) {
+            TransportMode.LORA -> {
+                // Production path: open LoRa BLE and start rx/tx pumps
+                LoRaDriver.open(context)
 
-            // Rx pump: BLE notify → inboundQueue
-            scope!!.launch(Dispatchers.Default) {
-                LoRaDriver.rxFrames.collect { raw ->
-                    raw?.let { enqueueInbound(it) }
+                // Rx pump: BLE notify → inboundQueue
+                scope!!.launch(Dispatchers.Default) {
+                    LoRaDriver.rxFrames.collect { raw ->
+                        raw?.let { enqueueInbound(it) }
+                    }
+                }
+
+                // Tx pump: drain outboundQueue → LoRaDriver.sendPacket()
+                scope!!.launch(Dispatchers.Default) {
+                    while (isActive) {
+                        val packet = outboundQueue.take()
+                        LoRaDriver.sendPacket(packet)
+                    }
                 }
             }
-
-            // Tx pump: drain outboundQueue → LoRaDriver.sendPacket()
-            scope!!.launch(Dispatchers.Default) {
-                while (isActive) {
-                    val packet = outboundQueue.take()
-                    LoRaDriver.sendPacket(packet)
-                }
+            TransportMode.LOOPBACK -> {
+                Log.i(tag, "Loopback mode — LoRa BLE + TCP relay stacks skipped; rxLoop is self-bound")
             }
-        } else {
-            Log.i(tag, "Loopback mode — LoRa BLE stack skipped; tx rxLoop is self-bound")
+            TransportMode.CELLULAR -> {
+                Log.i(tag, "Cellular transport — LoRa BLE stack skipped; tx pump → CellularBridge")
+            }
         }
     }
 
@@ -80,13 +89,20 @@ object MotoMeshEngine {
 
     /** Called by AudioPipeline txLoop — schedule one voice frame for broadcast or loopback. */
     fun txFrame(opusPayload: ByteArray) {
-        if (loopbackMode) {
-            // Direct ringback: encoded frame goes straight into the inbound queue
-            // that rxLoop is already polling. Zero latency, no GATT, no radio.
-            inboundQueue.offer(opusPayload)
-        } else {
-            val packet = MeshForwarder.buildOutbound(opusPayload)
-            outboundQueue.offer(packet)
+        when (transportMode) {
+            TransportMode.LOOPBACK -> {
+                // Direct ringback: encoded frame goes straight into the inbound queue
+                // that rxLoop is already polling. Zero latency, no GATT, no radio.
+                inboundQueue.offer(opusPayload)
+            }
+            TransportMode.LORA -> {
+                val packet = MeshForwarder.buildOutbound(opusPayload)
+                outboundQueue.offer(packet)
+            }
+            TransportMode.CELLULAR -> {
+                // Phase 2: send via TCP relay stub — CellularBridge handles framing
+                CellularBridge.sendFrame(opusPayload)
+            }
         }
     }
 

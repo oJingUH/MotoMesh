@@ -7,6 +7,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.motomesh.mesh.NodeRecord
+import com.motomesh.R
 import com.motomesh.databinding.ItemNodeBinding
 
 /**
@@ -46,6 +47,12 @@ class NodeAdapter(
                     else android.graphics.Color.parseColor("#FFB5B5")
                 )
             }
+            // Rider icon: bright when alive, dim when stale
+            val tintRes = if (n.isAlive) R.color.rider_icon_active else R.color.rider_icon_dim
+            b.ivIcon.setColorFilter(
+                androidx.core.content.ContextCompat.getColor(b.root.context, tintRes),
+                android.graphics.PorterDuff.Mode.SRC_IN
+            )
 
             b.root.setOnClickListener { onNodeClicked.invoke(n) }
         }

@@ -13,7 +13,7 @@
         android:id="@+id/title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="MotoMesh"
+        android:text="@string/app_name"
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#7EE8FA"
@@ -21,62 +21,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="@id/guideline_top" />
 
-    <TextView
-        android:id="@+id/subtitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="LoRa mesh voice chat — 0 riders in network"
-        android:textSize="14sp"
-        android:textStyle="italic"
-        android:textColor="#7EE8FA"
-        app:layout_constraintEnd_toEndOf="@id/title"
-        app:layout_constraintStart_toStartOf="@id/title"
-        app:layout_constraintTop_toBottomOf="@id/title"/>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/nodeList"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:background="#161B22"
-        app:layout_constraintBottom_toTopOf="@id/guideline_bottom"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/subtitle"
-        tools:listitem="@layout/item_node" />
-
-    <LinearLayout
-        android:id="@+id/controls"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="#161B22"
-        android:horizontalGap="16dp"
-        android:orientation="horizontal"
-        android:paddingHorizontal="20dp"
-        android:paddingVertical="16dp"
-        android:weightSum="2"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <Button
-            android:id="@+id/btnMute"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Mute"
-            android:textColor="#FFB5B5"
-            android:backgroundTint="#2D1735" />
-
-        <Button
-            android:id="@+id/btnConnect"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Connect LoRa"
-            android:textColor="#B5FFDA"
-            android:backgroundTint="#162B20" />
-
-    </LinearLayout>
+    <!-- musicBar — ducks under voice; sits directly below title -->
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/musicBar"
@@ -87,14 +32,156 @@
         android:max="100"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/subtitle" />
+        app:layout_constraintTop_toBottomOf="@id/title" />
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline_top"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.06" />
+        app:layout_constraintGuide_percent="0.10" />
+
+    <!-- nodeList spans the middle; constrained below title/musicBar + above controls -->
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/nodeList"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#161B22"
+        app:layout_constraintBottom_toTopOf="@id/controls"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/musicBar"
+        tools:listitem="@layout/item_node" />
+
+    <!-- controls + statusBar vertical chain pinned to bottom -->
+
+    <LinearLayout
+        android:id="@+id/controls"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#161B22"
+        android:gravity="center_vertical"
+        android:horizontalGap="16dp"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="14dp"
+        android:weightSum="2"
+        app:layout_constraintBottom_toTopOf="@id/guideline_bottom"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <Button
+            android:id="@+id/btnMute"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/btn_mute"
+            android:textColor="#FFB5B5"
+            android:backgroundTint="#2D1735" />
+
+        <Button
+            android:id="@+id/btnConnect"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/btn_connect"
+            android:textColor="#B5FFDA"
+            android:backgroundTint="#162B20" />
+
+    </LinearLayout>
+
+    <!-- statusIndicators — single row: connection state + RSSI + node count -->
+
+    <LinearLayout
+        android:id="@+id/statusIndicators"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="#161B22"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="20dp"
+        android:paddingVertical="5dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/controls">
+
+        <!-- Connection state indicator (left) -->
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <View
+                android:id="@+id/vDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="5dp"
+                android:background="#FF5050"
+                android:shape="oval" />
+
+            <TextView
+                android:id="@+id/tvConnState"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/conn_disconnected"
+                android:textColor="#FF5050"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvConnMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="@string/conn_loopback"
+                android:textColor="#8B949E"
+                android:textSize="10sp" />
+
+        </LinearLayout>
+
+        <!-- RSSI — center, gravity end (pushes right here, forward h-gap pushes it to center) -->
+
+        <TextView
+            android:id="@+id/tvRssi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:text="@string/hint_rssi"
+            android:textColor="#8B949E"
+            android:textSize="11sp" />
+
+        <!-- Node count (right) -->
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="0"
+            android:gravity="end">
+
+            <TextView
+                android:id="@+id/tvNodeCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/hint_nodes"
+                android:textColor="#8B949E"
+                android:textSize="11sp" />
+
+            <View
+                android:id="@+id/vVox"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:layout_marginStart="10dp"
+                android:background="#B5FFDA"
+                android:shape="oval"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
     <androidx.constraintlayout.widget.Guideline
         android:id="@+id/guideline_bottom"
