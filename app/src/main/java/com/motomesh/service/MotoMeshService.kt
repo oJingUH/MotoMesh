@@ -8,6 +8,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
@@ -175,6 +176,7 @@ class MotoMeshService : Service() {
 
     // ─── Permissions ─────────────────────────────────────────────────
 
+    @SuppressLint("InlinedApi")  // BLUETOOTH_CONNECT/SCAN API31 + POST_NOTIFICATIONS API33: runtime version-checked; minSdk=29 intentional
     private fun permissionsGranted(): Boolean {
         val alwaysNeeded = listOf(
             Manifest.permission.RECORD_AUDIO,

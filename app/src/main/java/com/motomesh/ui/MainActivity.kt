@@ -17,6 +17,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.motomesh.R
 import com.motomesh.databinding.ActivityMainBinding
@@ -98,7 +100,7 @@ class MainActivity : ComponentActivity() {
     // ─── Recycler ───────────────────────────────────────────────────
 
     private fun setupRecycler() {
-        nodeAdapter = NodeAdapter { node ->
+        nodeAdapter = NodeAdapter { _ ->
             // TODO: node detail — RSSI + loss-rate history overlay
         }
         b.nodeList.apply {
@@ -110,13 +112,15 @@ class MainActivity : ComponentActivity() {
     // ─── Node table observer ─────────────────────────────────────────
 
     private fun observeNodeTable() {
-        lifecycleScope.launchWhenStarted {
-            while (isActive) {
-                val snapshot = NodeTable.snapshot
-                nodeAdapter.submitList(snapshot)
-                val count = snapshot.size
-                b.tvNodeCount.text = if (count == 1) "1 node" else "$count nodes"
-                delay(250)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (isActive) {
+                    val snapshot = NodeTable.snapshot
+                    nodeAdapter.submitList(snapshot)
+                    val count = snapshot.size
+                    b.tvNodeCount.text = if (count == 1) "1 node" else "$count nodes"
+                    delay(250)
+                }
             }
         }
     }
@@ -125,7 +129,7 @@ class MainActivity : ComponentActivity() {
 
     private fun observeConnectionState() {
         connStateJob?.cancel()
-        connStateJob = lifecycleScope.launchWhenStarted {
+        connStateJob = lifecycleScope.launch {
             LoRaDriver.connectionState.collectLatest { state ->
                 val (dotColor, dotText) = when (state) {
                     LoRaDriver.ConnectionState.DISCONNECTED -> R.color.lo_red    to R.string.conn_disconnected
@@ -151,7 +155,7 @@ class MainActivity : ComponentActivity() {
 
     private fun observeRssi() {
         rssiJob?.cancel()
-        rssiJob = lifecycleScope.launchWhenStarted {
+        rssiJob = lifecycleScope.launch {
             LoRaDriver.loRaRssi.collectLatest { rssi ->
                 b.tvRssi.text = rssi?.let { "$it dBm" } ?: getString(R.string.hint_rssi)
             }
@@ -162,7 +166,7 @@ class MainActivity : ComponentActivity() {
 
     private fun observeCellular() {
         cellularObserver?.cancel()
-        cellularObserver = lifecycleScope.launchWhenStarted {
+        cellularObserver = lifecycleScope.launch {
             CellularBridge.cellularState.collect { state ->
                 val (dotColor, dotText) = when (state) {
                     CellularBridge.CellularState.AVAILABLE -> R.color.lo_green to R.string.conn_cellular_connected
@@ -375,7 +379,7 @@ class MainActivity : ComponentActivity() {
             return
         }
 
-        lifecycleScope.launchWhenStarted {
+        lifecycleScope.launch {
             b.btnConnect.isEnabled = false
             b.tvConnState.setText(R.string.conn_scanning)
             b.tvConnMode.setText(R.string.conn_lora)
@@ -386,7 +390,7 @@ class MainActivity : ComponentActivity() {
                     Toast.makeText(this@MainActivity, R.string.toast_no_ble_devices, Toast.LENGTH_LONG).show()
                     LoRaDriver.connectionState.value = LoRaDriver.ConnectionState.FAILED
                     updateConnectButton()
-                    return@launchWhenStarted
+                    return@launch
                 }
                 showLoRaDevicePicker(devices)
             } catch (e: Exception) {
@@ -404,7 +408,7 @@ class MainActivity : ComponentActivity() {
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle(R.string.dialog_scanning_title)
             .setAdapter(adapter) { _, which ->
-                lifecycleScope.launchWhenStarted {
+                lifecycleScope.launch {
                     LoRaDriver.connectToDevice(devices[which])
                     if (LoRaDriver.connectionState.value == LoRaDriver.ConnectionState.CONNECTED) {
                         Toast.makeText(this@MainActivity,
@@ -419,7 +423,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun disconnectLoRa() {
-        lifecycleScope.launchWhenStarted {
+        lifecycleScope.launch {
             LoRaDriver.close()
             MotoMeshEngine.stop()
             MotoMeshEngine.start(this@MainActivity, lifecycleScope, transport = TransportMode.LORA)

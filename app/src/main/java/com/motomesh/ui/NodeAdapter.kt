@@ -37,9 +37,9 @@ class NodeAdapter(
     inner class VH(private val b: ItemNodeBinding) : RecyclerView.ViewHolder(b.root) {
 
         fun bind(n: NodeRecord) {
-            b.tvNodeId.text = "Rider ${n.nodeId}"
-            b.tvRssi.text = "${n.rssi} dBm"
-            b.tvLoss.text = "${(n.lossRate * 100).toInt()}%"
+            b.tvNodeId.text = b.root.context.getString(R.string.node_label_rider, n.nodeId)
+            b.tvRssi.text = b.root.context.getString(R.string.node_label_rssi, n.rssi)
+            b.tvLoss.text = b.root.context.getString(R.string.node_label_loss, (n.lossRate * 100).toInt())
             b.pbVoice.isVisible = n.isAlive
             if (n.isAlive) {
                 b.pbVoice.progress = (n.lossRate * 100).toInt()

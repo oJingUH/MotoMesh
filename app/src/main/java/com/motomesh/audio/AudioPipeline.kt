@@ -102,7 +102,8 @@ class AudioPipeline(
 
             if (frame == null) {
                 // PLC silence frame — no decoded speech available
-                track!!.write(ShortArray(config.frameSamples) { 0 }, 0, config.frameSamples)
+                val silence = ShortArray(config.frameSamples) { 0 }
+                track!!.write(silence, 0, silence.size)
                 delay(config.frameMs.toLong())
                 continue
             }
@@ -111,7 +112,7 @@ class AudioPipeline(
             if (frame.isNotEmpty()) {
                 val rmsVal = computeFrameRms(frame)
                 onRms(rmsVal)           // DuckingController ← frame energy
-                track!!.write(frame, 0, frame.size)
+                track!!.write(frame, 0, frame.size.coerceAtMost(OpusCodec.FRAME_SAMPLES))
             }
             delay(config.frameMs.toLong())
         }

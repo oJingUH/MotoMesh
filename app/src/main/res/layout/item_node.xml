@@ -48,18 +48,18 @@
                     android:id="@+id/tvNodeId"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Rider 1"
+                    android:text="@string/node_label_rider"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
-                    android:textColor="#E6EDF3" />
+                    android:textColor="@color/lo_text" />
 
                 <TextView
                     android:id="@+id/tvRssi"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="-60 dBm"
+                    android:text="@string/node_label_rssi"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                     android:textColor="@color/lo_text"
-                    tools:text="-60 dBm" />
+                    tools:text="@string/node_label_rssi" />
 
             </LinearLayout>
 

@@ -133,7 +133,7 @@ object OpusCodec {
         while (true) {
             val info = MediaCodec.BufferInfo()
             val idx = codec.dequeueOutputBuffer(info, 0)
-            if (idx < 0) break
+            if (idx < 0) return@drainPending
             if (idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                 codec.releaseOutputBuffer(idx, false)
                 continue
