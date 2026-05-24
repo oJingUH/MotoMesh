@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
 
         setupRecycler()
         setupButtons()
-        requestPermissions(transportMode == TransportMode.LOOPBACK)
+        requestPermissions(transportMode)
         MotoMeshService.start(this, transport = transportMode)
         updateConnectButton()
     }
@@ -275,7 +275,7 @@ class MainActivity : ComponentActivity() {
         MotoMeshEngine.stop()
         stopService(Intent(this, MotoMeshService::class.java))
         MotoMeshService.start(this, transport = TransportMode.LORA)
-        requestPermissions(false)
+        requestPermissions(TransportMode.LORA)
         observeConnectionState()
         observeRssi()
         updateConnectButton()
@@ -288,8 +288,8 @@ class MainActivity : ComponentActivity() {
         MotoMeshEngine.stop()
         stopService(Intent(this, MotoMeshService::class.java))
         MotoMeshService.start(this, transport = TransportMode.CELLULAR)
-        requestPermissions(false)
-        // CellularBridge.init(this) will be called; TCP relay stub active
+        requestPermissions(TransportMode.CELLULAR)
+        // CellularBridge.init + connect are called from the perm callback above to avoid double-init
         updateConnectButton()
         Toast.makeText(this, "Switching to Cellular — TCP relay stub", Toast.LENGTH_SHORT).show()
     }
@@ -402,17 +402,20 @@ class MainActivity : ComponentActivity() {
 
     // ─── Permissions ───────────────────────────────────────────────────
 
-    private fun requestPermissions(loopback: Boolean) {
-        val perms = if (loopback) {
-            arrayOf(
+    private fun requestPermissions(mode: TransportMode) {
+        val perms = when (mode) {
+            TransportMode.LOOPBACK -> arrayOf(
                 Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.POST_NOTIFICATIONS,
             )
-        } else {
-            arrayOf(
+            TransportMode.LORA -> arrayOf(
                 Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.BLUETOOTH_CONNECT,
                 Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.POST_NOTIFICATIONS,
+            )
+            TransportMode.CELLULAR -> arrayOf(
+                Manifest.permission.RECORD_AUDIO,
                 Manifest.permission.POST_NOTIFICATIONS,
             )
         }
