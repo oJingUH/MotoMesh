@@ -173,7 +173,9 @@ class MotoMeshService : Service() {
         }
 
         if (getTransport() != TransportMode.LOOPBACK) {
+            // RYLR993 BLE path: connect + scan are the two Bluetooth operations
             val btPerms = listOf(
+                Manifest.permission.BLUETOOTH_SCAN,
                 Manifest.permission.BLUETOOTH_CONNECT,
             )
             for (p in btPerms) {
