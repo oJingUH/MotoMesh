@@ -66,16 +66,19 @@ class MainActivity : ComponentActivity() {
             Toast.makeText(this, "Permissions required for audio + transport", Toast.LENGTH_LONG).show()
             return@registerForActivityResult
         }
-        // Cellular perms will be handled here in transitionToCellular() stub assignment
-        // No WIFI_DIRECT path; loopback + LoRa request perms before transport switch
         if (transportMode == TransportMode.CELLULAR) {
-            Log.i("MotoMesh", "permLauncher: all perms OK -> TODO: startCellularConnect() port assignment")
+            val relayHost = if (android.os.Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
+            CellularBridge.init(this)
+            CellularBridge.connect(relayHost, 60005)
+            observeCellular()
+            Log.i("MotoMesh", "permLauncher: CELLULAR perms OK -> connecting to $relayHost:60005")
         }
     }
 
     // Observer jobs — cancel on stop/transition
     private var connStateJob: Job? = null
     private var rssiJob: Job? = null
+    private var cellularObserver: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,6 +151,31 @@ class MainActivity : ComponentActivity() {
         rssiJob = lifecycleScope.launchWhenStarted {
             LoRaDriver.loRaRssi.collectLatest { rssi ->
                 b.tvRssi.text = rssi?.let { "$it dBm" } ?: getString(R.string.hint_rssi)
+            }
+        }
+    }
+
+    // ─── Cellular state observer ────────────────────────────────────
+
+    private fun observeCellular() {
+        cellularObserver?.cancel()
+        cellularObserver = lifecycleScope.launchWhenStarted {
+            CellularBridge.cellularState.collect { state ->
+                val (dotColor, dotText) = when (state) {
+                    CellularBridge.CellularState.AVAILABLE -> R.color.lo_green to R.string.conn_cellular_connected
+                    CellularBridge.CellularState.CHECKING  -> R.color.lo_yellow to R.string.conn_cellular_connecting
+                    else -> R.color.lo_red to R.string.conn_cellular_failed
+                }
+                b.vDot.setBackgroundColor(ContextCompat.getColor(this@MainActivity, dotColor))
+                b.tvConnState.text = getString(dotText)
+                b.tvConnState.setTextColor(
+                    ContextCompat.getColor(
+                        this@MainActivity,
+                        if (state == CellularBridge.CellularState.AVAILABLE) R.color.lo_green else R.color.lo_red
+                    )
+                )
+                b.tvConnMode.setText(R.string.conn_cellular_connected)
+                updateConnectButton()
             }
         }
     }
@@ -276,6 +304,8 @@ class MainActivity : ComponentActivity() {
         connStateJob = null
         rssiJob?.cancel()
         rssiJob = null
+        cellularObserver?.cancel()
+        cellularObserver = null
         LoRaDriver.close()
         MotoMeshEngine.stop()
         stopService(Intent(this, MotoMeshService::class.java))
@@ -361,13 +391,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun stopCellular() {
-        lifecycleScope.launchWhenStarted {
-            Log.i("MainActivity", "stopCellular: closing CellularBridge, resetting state")
-            CellularBridge.close()
-            CellularBridge.cellularState.value = CellularBridge.CellularState.IDLE
-            updateConnectButton()
-            Toast.makeText(this@MainActivity, "Cellular disconnected", Toast.LENGTH_SHORT).show()
-        }
+        cellularObserver?.cancel()
+        cellularObserver = null
+        Log.i("MainActivity", "stopCellular: closing CellularBridge, resetting state")
+        CellularBridge.close()
+        CellularBridge.cellularState.value = CellularBridge.CellularState.IDLE
+        updateConnectButton()
+        Toast.makeText(this@MainActivity, "Cellular disconnected", Toast.LENGTH_SHORT).show()
     }
 
     // ─── Permissions ───────────────────────────────────────────────────
@@ -395,6 +425,8 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         connStateJob?.cancel()
         rssiJob?.cancel()
+        cellularObserver?.cancel()
+        cellularObserver = null
         super.onDestroy()
     }
 }
