@@ -18,6 +18,8 @@ import com.motomesh.cellular.CellularBridge
 import com.motomesh.ui.MainActivity
 import com.motomesh.mesh.MotoMeshEngine
 import com.motomesh.mesh.MotoMeshEngine.TransportMode
+import com.motomesh.audio.DuckingController
+import com.motomesh.audio.AudioPipeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
@@ -67,6 +69,8 @@ class MotoMeshService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob())
 
     private var foregrounded = false
+    private var audioPipeline: AudioPipeline? = null
+    private var duckingController: DuckingController? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -107,6 +111,9 @@ class MotoMeshService : Service() {
     override fun onDestroy() {
         MotoMeshEngine.stop()
         CellularBridge.close()
+        audioPipeline?.stop()   // stops txLoop + rxLoop before releasing resources
+        audioPipeline = null
+        duckingController = null
         releaseWake()
         super.onDestroy()
     }
@@ -156,6 +163,22 @@ class MotoMeshService : Service() {
     private fun boot() {
         Log.i(TAG, "Booting MotoMeshEngine — transport=$transportMode")
         MotoMeshEngine.start(this, serviceScope, transport = transportMode)
+
+        // DuckingController: scope = serviceScope.coroutineContext (not serviceScope itself,
+        // which is a CoroutineScope, not a CoroutineContext); context = this Service.
+        duckingController = DuckingController(
+            context = this,
+            scope  = serviceScope.coroutineContext
+        )
+
+        // AudioPipeline: callback bridges rxLoop voice RMS into DuckingController.
+        // Application context is safe here — AudioRecord / AudioTrack are created
+        // inside OpusCodec.buildAudioRecord/buildAudioTrack, both called with this
+        // application context from start().
+        audioPipeline = AudioPipeline(AudioPipeline.Config()) { rms ->
+            duckingController?.pushVoiceRms(rms)
+        }
+        audioPipeline?.start()
     }
 
     // ─── Permissions ─────────────────────────────────────────────────
