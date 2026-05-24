@@ -61,7 +61,7 @@ class AudioPipeline(
         jitter.reset()
     }
 
-    // ─── Tx loop: mic → Opus → engine ─────────────────────────────
+    // ─── Tx loop: mic → Opus → engine ─────────────────────────────────
 
     private suspend fun txLoop() = withContext(Dispatchers.Default) {
         val raw = ByteArray(config.frameSamples * 2)   // PCM 16-bit LE
@@ -69,7 +69,10 @@ class AudioPipeline(
             val n = record!!.read(raw, 0, raw.size)
             if (n <= 0) { delay(config.frameMs.toLong()); continue }
 
-            // bytes → shorts
+            // Zero the tail so a partial read never feeds stale bytes into the encoder.
+            java.util.Arrays.fill(raw, n, raw.size, 0.toByte())
+
+            // bytes → shorts (LE, 16-bit signed)
             for (i in 0 until config.frameSamples) {
                 pcmBuf[i] = ((raw[i * 2 + 1].toInt() shl 8) or (raw[i * 2].toInt() and 0xFF)).toShort()
             }
@@ -80,7 +83,7 @@ class AudioPipeline(
         }
     }
 
-    // ─── Rx loop: jitter → decode → output → ducking notifier ──────
+    // ─── Rx loop: jitter → decode → output → ducking notifier ──────────
 
     private suspend fun rxLoop() = withContext(Dispatchers.Default) {
         while (isActive && running.get()) {
@@ -106,7 +109,7 @@ class AudioPipeline(
 
             // frame is already ShortArray PCM from jitter / decode — write straight out
             if (frame.isNotEmpty()) {
-                val rmsVal = rms(frame)
+                val rmsVal = computeFrameRms(frame)
                 onRms(rmsVal)           // DuckingController ← frame energy
                 track!!.write(frame, 0, frame.size)
             }
@@ -114,7 +117,11 @@ class AudioPipeline(
         }
     }
 
-    private fun rms(buf: ShortArray): Short {
+    /**
+     * Compute the magnitude of the PCM RMS of a decoded frame.
+     * Marked private to avoid name-clash with the (now removed) public OpusCodec.rms().
+     */
+    private fun computeFrameRms(buf: ShortArray): Short {
         var sum = 0L
         for (s in buf) sum += (s * s).toInt().toLong()
         return kotlin.math.sqrt(sum.toDouble() / buf.size).toInt().toShort()

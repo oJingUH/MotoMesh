@@ -60,7 +60,7 @@ object LoRaDriver {
         if (connectionState.value in listOf(ConnectionState.CONNECTING, ConnectionState.CONNECTED)) return
         connectionState.value = ConnectionState.CONNECTING
         try {
-            val ok = withContext(Dispatchers.Main.immediate) {
+            val ok = withContext(Dispatchers.Default) {
                 RYLR993Ble.connectToDeviceSync(device)
             }
             connectionState.value = if (ok) ConnectionState.CONNECTED else ConnectionState.FAILED
@@ -75,7 +75,10 @@ object LoRaDriver {
         if (connectionState.value in listOf(ConnectionState.CONNECTING, ConnectionState.CONNECTED)) return
         connectionState.value = ConnectionState.CONNECTING
         try {
-            withContext(Dispatchers.Main.immediate) { RYLR993Ble.connect() }
+            // Run the blocking connectGatt + await() off the Main dispatcher so
+            // the GATT callback thread (which may be Main on Pixel 9) is never
+            // the same thread currently blocking on cb.await().
+            withContext(Dispatchers.Default) { RYLR993Ble.connect() }
             connectionState.value = when (RYLR993Ble.connectionState.value) {
                 RYLR993Ble.ConnectionState.CONNECTED -> ConnectionState.CONNECTED
                 RYLR993Ble.ConnectionState.FAILED  -> ConnectionState.FAILED

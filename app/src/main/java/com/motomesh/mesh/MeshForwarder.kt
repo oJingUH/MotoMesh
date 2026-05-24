@@ -63,10 +63,10 @@ object MeshForwarder {
         //   buf[1] = seq lo, buf[2] = seq hi
         // Byte 3: local node ID
         // processIncoming() reconstructs: seq = raw[1] or (raw[2] shl 8), nodeId = raw[3]
-        buf[1] = (seq and 0xFF).toByte()          // LSB of 16-bit seq
-        buf[2] = ((seq ushr 8) and 0xFF).toByte() // MSB of 16-bit seq
+        buf[1] = (seq and 0xFF).toByte()         // seq LSB (16-bit)
+        buf[2] = ((seq ushr 8) and 0xFF).toByte() // seq MSB
         buf[3] = (localNodeId and 0xFF).toByte()  // node ID
-        System.arraycopy(data, 0, buf, PAYLOAD_OFFSET, data.size.coerceAtMost(data.size))
+        System.arraycopy(data, 0, buf, PAYLOAD_OFFSET, data.size)
         return buf
     }
 

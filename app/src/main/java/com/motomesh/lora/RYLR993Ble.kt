@@ -186,7 +186,6 @@ fun scanForDevices(timeoutMs: Long = 8_000L): List<BluetoothDevice> {
     fun disconnect() {
         try {
             gatt?.let {
-                try { it.writeCharacteristic(writeCharacteristic) } catch (_: Exception) { }
                 it.disconnect()
                 it.close()
             }

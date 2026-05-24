@@ -862,8 +862,8 @@ This is a formatting error in the input data, not part of the codebase — ignor
 
 **CRITICAL — Crash risk in production**
 3. ~~**§10a** WifiDirectBridge.startDiscovery() / connectToPeer() — requireNotNull(null channel) throws if init() not called first.~~ ✅ Closed — WifiDirectBridge package deleted in Phase 1
-4. **§5a** GattConnectCallback.await() on Main thread — deadlock on Pixel 9 / Android 16 with at least one BLE connect trigger.
-5. **§4b** AudioRecord.read() tail not zeroed — stale PCM bytes feed the encoder on partial read.
+4. ~~**§5a** GattConnectCallback.await() on Main thread — deadlock on Pixel 9 / Android 16 with at least one BLE connect trigger.~~ ✅ Closed — `withContext(Dispatchers.Default)` in both `LoRaDriver.connect()` and `connectToDevice()`; BLE scan path (Main-only) is scoped to the scanner latch, not the GATT wait latch
+5. **§4b** AudioRecord.read() tail — stale PCM bytes feed the encoder on partial read. ✅ Closed — `java.util.Arrays.fill(raw, n, raw.size, 0.toByte())` zeroes tail after every `read()` in `AudioPipeline.txLoop()`
 6. **§2a** CAPTURE_AUDIO_OUTPUT — protected permission, throw SecurityException if ducking code re-enabled.
 
 **HIGH — Will prevent clean Play Store submission**
@@ -872,9 +872,9 @@ This is a formatting error in the input data, not part of the codebase — ignor
 9. ~~**§8c** BLUETOOTH_SCAN absent from MotoMeshService.permissionsGranted() — defensive gap.~~ ✅ Closed — added to `btPerms` in commit `ef3bc5f`
 
 **MEDIUM — Code health / maintainability**
-10. **§4f** Duplicate `rms()` in two files — merge to single utility.
+10. ~~**§4f** Duplicate `rms()` in two files — merge to single utility.~~ ✅ Closed — dead public `fun rms()` removed from `OpusCodec.kt` (0 callers); `AudioPipeline.rms()` renamed to `computeFrameRms()` for unambiguous local helper intent
 11. **§6b** `coerceAtMost(data.size)` — remove redundancy.
-12. **§10b** `it.writeCharacteristic(writeCharacteristic)` — remove dead no-op (also caught by lint).
+12. ~~**§10b** `it.writeCharacteristic(writeCharacteristic)` — remove dead no-op (also caught by lint).~~ ✅ Closed — removed in `RYLR993Ble.disconnect()`
 13. **§9b** `currentConnectionState() as Any` — strong type cast needed.
 14. **§9.fix** `transportMode` not persisted across process kill — implement SavedStateHandle.
 15. **§12e** `ObsoleteSdkInt` — clean up `SDK_INT >= O/M` checks; minSdk=29 makes them always-true.

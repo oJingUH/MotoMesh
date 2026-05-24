@@ -215,11 +215,3 @@ object OpusCodec {
         .build()
 }
 
-/**
- * Compute the magnitude of the PCM RMS of a decoded frame.
- */
-fun rms(buf: ShortArray): Short {
-    var sum = 0L
-    for (s in buf) sum += (s * s).toInt().toLong()
-    return kotlin.math.sqrt(sum.toDouble() / buf.size).toInt().toShort()
-}
