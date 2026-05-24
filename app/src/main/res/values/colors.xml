@@ -4,14 +4,10 @@
     <color name="white">#FFFFFFFF</color>
     <color name="accent_blue">#7EE8FA</color>
     <color name="accent_green">#B5FFDA</color>
-
-    <!-- LoRa connection state dot colors -->
     <color name="lo_red">#FF5050</color>
     <color name="lo_yellow">#FFC658</color>
     <color name="lo_blue">#7EE8FA</color>
     <color name="lo_green">#5FE88A</color>
-
-    <!-- Status bar text (greyed when inactive) -->
     <color name="lo_text">#8B949E</color>
 
     <!-- Rider icon tint in node list -->

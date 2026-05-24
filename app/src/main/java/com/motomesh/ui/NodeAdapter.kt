@@ -2,13 +2,14 @@ package com.motomesh.ui
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
-import com.motomesh.mesh.NodeRecord
 import com.motomesh.R
 import com.motomesh.databinding.ItemNodeBinding
+import com.motomesh.mesh.NodeRecord
 
 /**
  * NodeAdapter — binds [NodeRecord] snapshots from NodeTable into the RecyclerView.
@@ -50,7 +51,7 @@ class NodeAdapter(
             // Rider icon: bright when alive, dim when stale
             val tintRes = if (n.isAlive) R.color.rider_icon_active else R.color.rider_icon_dim
             b.ivIcon.setColorFilter(
-                androidx.core.content.ContextCompat.getColor(b.root.context, tintRes),
+                ContextCompat.getColor(b.root.context, tintRes),
                 android.graphics.PorterDuff.Mode.SRC_IN
             )
 

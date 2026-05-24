@@ -56,10 +56,10 @@
                     android:id="@+id/tvRssi"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="–60 dBm"
+                    android:text="-60 dBm"
                     android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-                    android:textColor="#8B949E"
-                    tools:text="–60 dBm" />
+                    android:textColor="@color/lo_text"
+                    tools:text="-60 dBm" />
 
             </LinearLayout>
 
@@ -74,7 +74,7 @@
             android:indeterminate="false"
             android:max="100"
             android:progress="0"
-            android:progressTint="#7EE8FA"
+            android:progressTint="@color/lo_blue"
             android:visibility="gone" />
 
         <TextView
@@ -83,9 +83,9 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
-            android:text="0%"
+            android:text="@string/label_packet_loss_pct"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
-            android:textColor="#8B949E"
+            android:textColor="@color/lo_text"
             android:textSize="10sp"
             android:gravity="center" />
 

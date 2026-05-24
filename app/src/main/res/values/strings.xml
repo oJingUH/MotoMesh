@@ -17,6 +17,9 @@
     <string name="conn_loopback">Loopback</string>
     <string name="conn_lora">LoRa</string>
 
+    <!-- Node list packet loss display -->
+    <string name="label_packet_loss_pct" translatable="false">0%</string>
+
     <!-- Default hints — overwritten at runtime by MainActivity observers -->
     <string name="hint_rssi" translatable="false">– dBm</string>
     <string name="hint_nodes" translatable="false">– nodes</string>
@@ -24,7 +27,6 @@
     <!-- Permission toasts / dialogs -->
     <string name="toast_no_ble_devices">No RYLR993 devices found nearby.</string>
     <string name="dialog_scanning_title">Scanning for LoRa modules</string>
-    <string name="dialog_no_devices">No RYLR993 modules found. Make sure Bluetooth is on and the module is powered up.</string>
     <!-- Transport connection buttons (loopback entry point dialog) -->
     <string name="dialog_pick_transport_title">Connect via</string>
     <string name="transport_lora">LoRa BLE</string>

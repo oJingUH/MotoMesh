@@ -136,18 +136,10 @@ fun scanForDevices(timeoutMs: Long = 8_000L): List<BluetoothDevice> {
 
     return try {
         var useFilter = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            try {
-                val filt = ScanFilter.Builder()
-                    .setServiceUuid(android.os.ParcelUuid(SERVICE_UUID))
-                    .build()
-                scanner.startScan(listOf(filt), ScanSettings.Builder().build(), cb)
-            } catch (_: Exception) {
-                useFilter = false
-            }
-        } else {
-            useFilter = false
-        }
+        val filt = ScanFilter.Builder()
+            .setServiceUuid(android.os.ParcelUuid(SERVICE_UUID))
+            .build()
+        scanner.startScan(listOf(filt), ScanSettings.Builder().build(), cb)
 
         if (!useFilter) {
             scanner.startScan(cb)

@@ -16,6 +16,8 @@
     <!-- Cellular TCP relay (Phase 1 stub: no socket opened yet) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Required on Android 12+ for coarse BLE device scan result -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
     <!-- USB OTG fallback if BLE pairing isn't used -->
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />

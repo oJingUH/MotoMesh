@@ -54,11 +54,7 @@ class MotoMeshService : Service() {
             val intent = Intent(context, MotoMeshService::class.java).apply {
                 putExtra(EXTRA_TRANSPORT, transport)
             }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
+            context.startForegroundService(intent)
         }
 
         fun getTransport(): TransportMode = transportMode
@@ -124,26 +120,22 @@ class MotoMeshService : Service() {
 
     private fun startInForeground() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                NOTIF_CHANNEL_ID,
-                "MotoMesh Active",
-                NotificationManager.IMPORTANCE_LOW,  // LOW = silent, always visible
-            ).apply {
-                description = "MotoMesh voice service is running"
-                setShowBadge(false)
-            }
-            nm.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            NOTIF_CHANNEL_ID,
+            "MotoMesh Active",
+            NotificationManager.IMPORTANCE_LOW,  // LOW = silent, always visible
+        ).apply {
+            description = "MotoMesh voice service is running"
+            setShowBadge(false)
         }
-
+        nm.createNotificationChannel(channel)
         val launchIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pi = PendingIntent.getActivity(
             this, 0, launchIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
-                        PendingIntent.FLAG_IMMUTABLE else 0
+                    PendingIntent.FLAG_IMMUTABLE
         )
 
         val notification = NotificationCompat.Builder(this, NOTIF_CHANNEL_ID)

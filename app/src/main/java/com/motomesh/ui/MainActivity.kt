@@ -365,10 +365,9 @@ class MainActivity : ComponentActivity() {
     // ─── LoRa connect flow ───────────────────────────────────────────
 
     private fun startLoRaConnect() {
-        val scanOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) ==
-                    PackageManager.PERMISSION_GRANTED
-        } else true
+        val scanOk = ContextCompat.checkSelfPermission(
+            this, Manifest.permission.BLUETOOTH_SCAN
+        ) == PackageManager.PERMISSION_GRANTED
 
         if (!scanOk) {
             permLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_SCAN))
