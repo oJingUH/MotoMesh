@@ -1,5 +1,6 @@
 package com.motomesh.audio
 
+import android.annotation.SuppressLint
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioTrack
@@ -172,6 +173,7 @@ object OpusCodec {
 
     // ─── AudioRecord / AudioTrack helpers ─────────────────────────
 
+    @SuppressLint("MissingPermission")
     fun micRecordBufferSize(): Int =
         AudioRecord.getMinBufferSize(
             SAMPLE_RATE,
@@ -179,6 +181,7 @@ object OpusCodec {
             AudioFormat.ENCODING_PCM_16BIT
         )
 
+    @SuppressLint("MissingPermission")
     fun speakerPlaybackBufferSize(): Int =
         AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
@@ -186,6 +189,7 @@ object OpusCodec {
             AudioFormat.ENCODING_PCM_16BIT
         )
 
+    @SuppressLint("MissingPermission")
     fun buildAudioRecord(bufSize: Int): AudioRecord = AudioRecord.Builder()
         .setAudioFormat(
             AudioFormat.Builder()
@@ -197,6 +201,7 @@ object OpusCodec {
         .setBufferSizeInBytes(bufSize.coerceAtLeast(micRecordBufferSize() * 3))
         .build()
 
+    @SuppressLint("MissingPermission")
     fun buildAudioTrack(bufSize: Int): AudioTrack = AudioTrack.Builder()
         .setAudioAttributes(
             android.media.AudioAttributes.Builder()

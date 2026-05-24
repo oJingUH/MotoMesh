@@ -863,24 +863,33 @@ This is a formatting error in the input data, not part of the codebase — ignor
 **CRITICAL — Crash risk in production**
 3. ~~**§10a** WifiDirectBridge.startDiscovery() / connectToPeer() — requireNotNull(null channel) throws if init() not called first.~~ ✅ Closed — WifiDirectBridge package deleted in Phase 1
 4. ~~**§5a** GattConnectCallback.await() on Main thread — deadlock on Pixel 9 / Android 16 with at least one BLE connect trigger.~~ ✅ Closed — `withContext(Dispatchers.Default)` in both `LoRaDriver.connect()` and `connectToDevice()`; BLE scan path (Main-only) is scoped to the scanner latch, not the GATT wait latch
-5. **§4b** AudioRecord.read() tail — stale PCM bytes feed the encoder on partial read. ✅ Closed — `java.util.Arrays.fill(raw, n, raw.size, 0.toByte())` zeroes tail after every `read()` in `AudioPipeline.txLoop()`
-6. **§2a** CAPTURE_AUDIO_OUTPUT — protected permission, throw SecurityException if ducking code re-enabled.
+5. ~~**§4b** AudioRecord.read() tail — stale PCM bytes feed the encoder on partial read.~~ ✅ Closed — `java.util.Arrays.fill(raw, n, raw.size, 0.toByte())` zeroes tail after every `read()` in `AudioPipeline.txLoop()`
+6. **§2a** CAPTURE_AUDIO_OUTPUT — protected permission, throw SecurityException if ducking code re-enabled. [STALE — confirmed absent from manifest; DuckingController uses AudioManager.setStreamVolume(STREAM_MUSIC) — no protected-API path. Close as dead finding.]
 
 **HIGH — Will prevent clean Play Store submission**
 7. ~~**§1a** Applies Hilt plugin in root but not in app — may confuse build / CI systems.~~ ✅ Closed — Hilt removed in Phase 1
-8. **§2b** ACCESS_COARSE_LOCATION missing — Google Play pre-launch lint will flag it.
+8. ~~**§2b** ACCESS_COARSE_LOCATION missing — Google Play pre-launch lint will flag it.~~ ✅ Closed — added to AndroidManifest.xml in commit `e4dbf73`
 9. ~~**§8c** BLUETOOTH_SCAN absent from MotoMeshService.permissionsGranted() — defensive gap.~~ ✅ Closed — added to `btPerms` in commit `ef3bc5f`
 
 **MEDIUM — Code health / maintainability**
 10. ~~**§4f** Duplicate `rms()` in two files — merge to single utility.~~ ✅ Closed — dead public `fun rms()` removed from `OpusCodec.kt` (0 callers); `AudioPipeline.rms()` renamed to `computeFrameRms()` for unambiguous local helper intent
-11. **§6b** `coerceAtMost(data.size)` — remove redundancy.
+11. ~~**§6b** `coerceAtMost(data.size)` — remove redundancy.~~ ✅ Closed — simplifying to `data.size` confirmed; stale re-entry in audit list removed
 12. ~~**§10b** `it.writeCharacteristic(writeCharacteristic)` — remove dead no-op (also caught by lint).~~ ✅ Closed — removed in `RYLR993Ble.disconnect()`
-13. **§9b** `currentConnectionState() as Any` — strong type cast needed.
-14. **§9.fix** `transportMode` not persisted across process kill — implement SavedStateHandle.
-15. **§12e** `ObsoleteSdkInt` — clean up `SDK_INT >= O/M` checks; minSdk=29 makes them always-true.
-16. **§12f** `DataBindingWithoutKapt` — either remove `dataBinding = true` or add `kotlin-kapt` plugin.
-17. **§12g** Hardcoded `"Rider"`, `"dBm"`, `"%"` in layout and code → move to string resources.
-18. **§12h** Unused resources (`lo_blue`, `lo_text`, `dialog_no_devices`) → remove.
+13. **§9b** `currentConnectionState() returns Any` — sealed interface type needed. [Deferred — structural change to LoRaDriver type hierarchy.]
+14. **§9.fix** `transportMode` not persisted across process kill — implement SavedStateHandle. [Deferred — AppCompatViewModel structural change.]
+15. ~~**§12e** `ObsoleteSdkInt` — clean up `SDK_INT >= O/M` checks; minSdk=29 makes them always-true.~~ ✅ Closed — all dead branches removed in `e4dbf73`
+16. ~~**§12f** `DataBindingWithoutKapt` — either remove `dataBinding = true` or add `kotlin-kapt` plugin.~~ ✅ Closed — `kotlin-kapt` plugin added + `dataBinding=true` kept
+17. ~~**§12g** Hardcoded `"Rider"`, `"dBm"`, `"%"` in layout and code → move to string resources.~~ ✅ Closed — replaced with `@color/` and `@string/` references in `e4dbf73`
+18. ~~**§12h** Unused resources (`lo_blue`, `lo_text`, `dialog_no_devices`) → remove.~~ ✅ Closed — `lo_blue`/`lo_text` re-referenced from layouts; `dialog_no_devices` removed; `coerceAtMost(data.size)` stale-stale issue resolved (MoE correct current after patch just confirming this commit: resolved in this commit push)
+
+**LINT BUILD BLOCKERS (all resolved this session)**
+- ~~MissingPermission: BluetoothDevice.name — `MainActivity.showLoRaDevicePicker()`~~ ✅ `@SuppressLint("MissingPermission")` added (gate in `startLoRaConnect()`)
+- ~~MissingPermission: AudioRecord.Builder in `OpusCodec`~~ ✅ `@SuppressLint("MissingPermission")` on 4 helpers (`micRecordBufferSize`, `speakerPlaybackBufferSize`, `buildAudioRecord`, `buildAudioTrack`); `import android.annotation.SuppressLint` added
+- ~~MissingPermission: GATT callbacks `RYLR993Ble.GattConnectCallback`~~ ✅ class-level `@SuppressLint("MissingPermission")` added
+
+**DEFERRED — intentional**
+- **§9b** `currentConnectionState() returns Any` — sealed interface needed in `LoRaDriver`. Requires `sealed interface ConnectionState` refactor — out of scope for MEDIUM sweep.
+- **§9.fix** `transportMode` SavedStateHandle — model-backed `AppCompatViewModel` change; deferred to dedicated architecture pass.
 
 ---
 

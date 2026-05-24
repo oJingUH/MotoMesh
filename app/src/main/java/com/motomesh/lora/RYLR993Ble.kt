@@ -210,6 +210,7 @@ fun scanForDevices(timeoutMs: Long = 8_000L): List<BluetoothDevice> {
 
     // ─── BLE GATT callback ───────────────────────────────────────
 
+    @SuppressLint("MissingPermission")
     private class GattConnectCallback : BluetoothGattCallback() {
 
         private val latch = java.util.concurrent.CountDownLatch(1)

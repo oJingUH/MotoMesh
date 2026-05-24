@@ -1,6 +1,7 @@
 package com.motomesh.ui
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -396,6 +397,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private fun showLoRaDevicePicker(devices: List<BluetoothDevice>) {
         val names = devices.map { it.name ?: it.address }
         val adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, names)
