@@ -72,7 +72,19 @@ object MotoMeshEngine {
                 Log.i(tag, "Loopback mode — LoRa BLE + TCP relay stacks skipped; rxLoop is self-bound")
             }
             TransportMode.CELLULAR -> {
-                Log.i(tag, "Cellular transport — LoRa BLE stack skipped; tx pump → CellularBridge")
+                CellularBridge.init(context)
+                // Tx pump already handled in txFrame() → CellularBridge.sendFrame()
+                // Rx pump: drain cellular TCP inbound → engine inboundQueue
+                scope!!.launch(Dispatchers.Default) {
+                    while (isActive) {
+                        val frame = CellularBridge.takeCellularFrame()
+                        if (frame != null) {
+                            enqueueInbound(frame)
+                        } else {
+                            delay(10)   // nothing this tick, yield to dispatcher
+                        }
+                    }
+                }
             }
         }
     }
@@ -81,6 +93,7 @@ object MotoMeshEngine {
         scope?.coroutineContext?.get(Job)?.cancel()
         scope = null
         LoRaDriver.close()
+        CellularBridge.close()
         inboundQueue.clear()
         outboundQueue.clear()
     }

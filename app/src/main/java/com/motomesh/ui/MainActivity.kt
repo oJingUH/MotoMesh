@@ -353,10 +353,11 @@ class MainActivity : ComponentActivity() {
     // ─── Cellular transport stubs ──────────────────────────────────────
 
     private fun startCellularTransfer() {
-        // Phase 2: open TCP relay, bind to cellular network
+        // Phase 3: default relay = Android emulator host loopback; real device = actual relay IP
+        val relayHost = if (android.os.Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
         CellularBridge.init(this)
-        Log.i("MainActivity", "startCellularTransfer: cellular stub initialized, state=${CellularBridge.cellularState.value}")
-        // User-selected relay host/port will feed CellularBridge.connectToRelay(host, port)
+        CellularBridge.connect(relayHost, 60005)
+        Log.i("MainActivity", "startCellularTransfer: connecting to $relayHost:60005  state=${CellularBridge.cellularState.value}")
     }
 
     private fun stopCellular() {
@@ -386,6 +387,7 @@ class MainActivity : ComponentActivity() {
             )
         }
         permLauncher.launch(perms)
+        // TODO cellular: add relay connect callback after perms granted
     }
 
     // ─── Lifecycle ───────────────────────────────────────────────────
