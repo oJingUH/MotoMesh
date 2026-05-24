@@ -387,7 +387,7 @@ Every call in `AudioPipeline` (line 120, 109) resolves to the private copy, neve
 
 ---
 
-### 4e. DuckingController voiceThreshold:1200 — encode scale mismatch  [INFO — calibration]
+### 4e. DuckingController voiceThreshold:1200 — calibration pending  [INFO — calibration]
 
 **File:** `DuckingController.kt` line 19
 
@@ -395,13 +395,22 @@ Every call in `AudioPipeline` (line 120, 109) resolves to the private copy, neve
 private val voiceThreshold: Short = 1200
 ```
 
-The Raw RMS of a 320-sample 16-bit mono frame calculated on the decoded PCM has a range depends on gain. For typical mic gain (24 dB), RMS of normal roughtalk is in the range 3k–10k. The hard threshold of 1200 will almost certainly prevent ducking from ever triggering while riding in a moving vehicle — the RMS display threshold 1200 is set below the typical level of the decoded PCM block scale, the ducking may fire spuriously during quiet periods.
+`applyGainToSystem()` is now implemented using `AudioManager.setStreamVolume(STREAM_MUSIC, …)`
+so the gain envelope is wired to the OS mixer. The threshold constant however is still the
+engineer's initial estimate without ride-along data against it.
 
-**Fix:** Calibrate against real ride-along audio data. Set a dynamic threshold in the range 2000–5000 and validate over a 10-minute ride log.
+**Fix:** Capture `rms` distribution on a real ride session (logcat `pushVoiceRms` values
+at 50 Hz over a 10-minute ride). Set `voiceThreshold` to approximately 10 dB above the
+environmental floor (ride noise RMS). Guide: road-wind RMS typically lands in 400–1200;
+audible voice in helmet typically lands in 2000–5000. Pick threshold in the lower half of
+that band and validate by observing the music soft/hard un-duck latency.
+
+Recommended range: `2000–5000`. Update DuckingController constructor call in
+`MotoMeshService.boot()` when data is available.
 
 ---
 
-### 4f. DuckingController tick() is a no-op loop  [INFO — CPU idle]
+### 4f. DuckingController tick() is a no-op loop  [DOCUMENTED]
 
 **File:** `DuckingController.kt` lines 62–65
 
@@ -412,7 +421,18 @@ private fun tick() {
 }
 ```
 
-`tick()` runs at 60 Hz inside a `while(isActive)` loop with `delay(16)`. It processes nothing, makes no calls, produces no state change. It burns CPU for the entire ride session. This placeholder is a latency / battery waste.
+`tick()` runs at 60 Hz alongside `pushVoiceRms()` at 50 Hz. It is intentionally a pass-through
+placeholder: gain snaps on each frame boundary via `applyGainToSystem()`. The coroutine exists
+so that when interpolation is added the scaffold is already wired to the service parent scope.
+
+When interpolation is implemented, use:
+  `_musicGain += (targetGain - _musicGain) * A * dt`
+where `A ≈ 12 ds⁻¹` (12 dB/s time constant) and `dt = 0.020 s` (one frame). This yields
+α ≈ 0.23 per sample — roughly 3 frames (~60 ms) to reach 50 % of target.
+
+**Close criteria:** ramp interp added; `tick()` loop body computes and writes `_musicGain`.
+
+---
 
 **Fix:** Remove the loop, or fold `tick()` into the coroutine scan that would produce an interpolation ramp:
 
@@ -428,6 +448,30 @@ fun start() {
     }
 }
 ```
+
+---
+### 4h. AudioPipeline and DuckingController not wired into boot path  [CLOSED]
+
+**Files:** `MotoMeshService.kt`, `AudioPipeline.kt`, `DuckingController.kt`, `MeshEngine.kt`
+
+`MotoMeshService.boot()` called `MotoMeshEngine.start()` but never called
+`AudioPipeline.start()` — the `AudioRecord` / `AudioTrack` / Opus encode / decode
+pipeline was constructed but never instantiated anywhere in the app. The `onRms`
+callback in `AudioPipeline.Config` consumed voice RMS and was supposed to feed
+`DuckingController.pushVoiceRms()`, but with no AudioPipeline instance the chain
+was entirely dead: no mic, no speaker, no ducking.
+
+`DuckingController.applyGainToSystem()` was also a no-op stub.
+
+**Fix committed in `8c5c556`:**
+- `AudioPipeline` + `DuckingController` instantiated in `MotoMeshService.boot()`.
+- `DuckingController(context = this@Service, scope = serviceScope.coroutineContext)`.
+- `AudioPipeline(onRms = { duckingController?.pushVoiceRms(it) })` wired in same block.
+- `AudioPipeline.start()` called immediately after creation.
+- `AudioPipeline.stop()` called in `onDestroy()` before wake/engine release.
+- `AudioPipeline.applyGainToSystem` now reads `AudioManager.setStreamVolume(STREAM_MUSIC,…)`,
+  maps `_musicGain * systemVolumeMax → volumeIndex`, one-vol-cache check avoids
+  repeated IPC.
 
 ---
 
@@ -813,19 +857,19 @@ This is a formatting error in the input data, not part of the codebase — ignor
 ## FULL PRIORITY FIX LIST (in work order)
 
 **BLOCKER — Functional correctness**
-1. **§4c** JitterBuffer.pushFrame() is always silent → remote rider audio never reaches speaker for non-loopback path.
-2. **§6a** buildOutbound sequence wraps at 256 → after ~5 s TX the distrupt flag resets, duplicate voices flood the mesh.
+1. ~~**§4c** JitterBuffer.pushFrame() is always silent → remote rider audio never reaches speaker for non-loopback path.~~ ✅ Closed — signature changed to `pushFrame(frame: ShortArray)`, frames dropped when buffer full
+2. ~~**§6a** buildOutbound sequence wraps at 256 → after ~5 s TX the distrupt flag resets, duplicate voices flood the mesh.~~ ✅ Closed — changed to `and 0xFFFF`; 16-bit header sends `seq_lo + seq_hi`; receiver reconstructs correctly
 
 **CRITICAL — Crash risk in production**
-3. **§10a** WifiDirectBridge.startDiscovery() / connectToPeer() — requireNotNull(null channel) throws if init() not called first.
+3. ~~**§10a** WifiDirectBridge.startDiscovery() / connectToPeer() — requireNotNull(null channel) throws if init() not called first.~~ ✅ Closed — WifiDirectBridge package deleted in Phase 1
 4. **§5a** GattConnectCallback.await() on Main thread — deadlock on Pixel 9 / Android 16 with at least one BLE connect trigger.
 5. **§4b** AudioRecord.read() tail not zeroed — stale PCM bytes feed the encoder on partial read.
 6. **§2a** CAPTURE_AUDIO_OUTPUT — protected permission, throw SecurityException if ducking code re-enabled.
 
 **HIGH — Will prevent clean Play Store submission**
-7. **§1a** Applies Hilt plugin in root but not in app — may confuse build / CI systems.
+7. ~~**§1a** Applies Hilt plugin in root but not in app — may confuse build / CI systems.~~ ✅ Closed — Hilt removed in Phase 1
 8. **§2b** ACCESS_COARSE_LOCATION missing — Google Play pre-launch lint will flag it.
-9. **§8c** BLUETOOTH_SCAN absent from MotoMeshService.permissionsGranted() — defensive gap.
+9. ~~**§8c** BLUETOOTH_SCAN absent from MotoMeshService.permissionsGranted() — defensive gap.~~ ✅ Closed — added to `btPerms` in commit `ef3bc5f`
 
 **MEDIUM — Code health / maintainability**
 10. **§4f** Duplicate `rms()` in two files — merge to single utility.
@@ -855,9 +899,7 @@ This is a formatting error in the input data, not part of the codebase — ignor
 
 **LOW — Calibration / cleanup**
 
-19. **§4f** DuckingController voiceThreshold:1200 — tune against ride-along audio.
-20. **§4g** DuckingController tick() no-op loop — remove or implement ramp interpolation.
-21. **§12a** `10sp` in layouts → bump to ≥ 11sp.
+18. **§4b** `10sp` in layouts → bump to ≥ 11sp.
 
 ---
 
