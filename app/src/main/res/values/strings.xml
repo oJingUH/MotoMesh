@@ -45,6 +45,11 @@
     <!-- ── Audio stub ─────────────────────────────────────────────────── ▶ -->
     <string name="settings_audio_stub">VOX delay, ducking threshold, and noise gate controls — coming in a future update.</string>
 
+    <!-- ── Channel / Network ID ──────────────────────────────────────────▶ -->
+    <string name="settings_channel_hint">Channel (0–15)</string>
+    <string name="settings_channel_helper">Only riders on the same channel can hear each other</string>
+    <string name="toast_channel_saved">Channel saved</string>
+
     <!-- ── Audio settings ─────────────────────────────────────────────── ▶ -->
     <string name="settings_vox_threshold">VOX threshold</string>
     <string name="settings_vox_threshold_summary">Sensitivity: %1$d (higher = louder voice required to duck music)</string>

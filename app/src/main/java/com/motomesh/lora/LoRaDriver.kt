@@ -69,7 +69,7 @@ object LoRaDriver {
                 RYLR993Ble.connectToDeviceSync(device)
             }
             if (ok) {
-                configureModule()
+                configureModule(channelConfig())
             } else {
                 connectionState.value = ConnectionState.FAILED
             }
@@ -89,7 +89,7 @@ object LoRaDriver {
             // the same thread currently blocking on cb.await().
             withContext(Dispatchers.Default) { RYLR993Ble.connect() }
             when (RYLR993Ble.connectionState.value) {
-                RYLR993Ble.ConnectionState.CONNECTED -> { configureModule(); connectionState.value = ConnectionState.CONNECTED }
+                RYLR993Ble.ConnectionState.CONNECTED -> { configureModule(channelConfig()); connectionState.value = ConnectionState.CONNECTED }
                 RYLR993Ble.ConnectionState.FAILED  -> connectionState.value = ConnectionState.FAILED
                 else                               -> connectionState.value = ConnectionState.CONNECTING
             }
@@ -132,6 +132,15 @@ object LoRaDriver {
     }
 
     // ─── Radio config (AT commands on the RYLR993 module) ───────────
+
+    /** Read channel from SharedPreferences and build a RadioConfig. */
+    private fun channelConfig(): RadioConfig {
+        val ctx = appContext()
+        val channel = ctx.getSharedPreferences("moto_settings", Context.MODE_PRIVATE)
+            .getInt("channel", 0)
+            .coerceIn(0, 15)
+        return RadioConfig(networkId = channel)
+    }
 
     /**
      * Radio parameters sent to the module via AT commands after BLE connects.

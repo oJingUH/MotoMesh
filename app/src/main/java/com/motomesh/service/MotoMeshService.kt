@@ -169,9 +169,13 @@ class MotoMeshService : Service() {
                     TransportMode.LORA -> "LoRa"
                     TransportMode.CELLULAR -> "Cellular"
                 }
+                val channel = if (transportMode == TransportMode.LORA)
+                    ctx.getSharedPreferences("moto_settings", Context.MODE_PRIVATE).getInt("channel", 0)
+                else 0
+                val channelTag = if (transportMode == TransportMode.LORA) " Ch$channel" else ""
                 val riderCount = nodes.count { it.isAlive }
-                val text = if (riderCount == 0) "$modeLabel — idle"
-                    else "$modeLabel — $riderCount rider${if (riderCount != 1) "s" else ""}"
+                val text = if (riderCount == 0) "$modeLabel$channelTag — idle"
+                    else "$modeLabel$channelTag — $riderCount rider${if (riderCount != 1) "s" else ""}"
 
                 val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 val launchIntent = Intent(ctx, MainActivity::class.java).apply {

@@ -100,8 +100,10 @@ class SettingsActivity : AppCompatActivity() {
         val defaultHost = if (Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
         val savedHost = settingsPrefs.getString("relay_host", defaultHost) ?: defaultHost
         val savedPort = settingsPrefs.getInt("relay_port", 60005)
+        val savedChannel = settingsPrefs.getInt("channel", 0)
         b.etRelayHost.setText(savedHost)
         b.etRelayPort.setText(savedPort.toString())
+        b.etChannel.setText(savedChannel.toString())
     }
 
     private fun clearRelayError() {
@@ -191,6 +193,15 @@ class SettingsActivity : AppCompatActivity() {
                 .putInt("relay_port", port)
                 .apply()
             clearRelayError()
+        }
+
+        // Save channel / network ID
+        val channelRaw = b.etChannel.text?.toString()?.toIntOrNull()
+        if (channelRaw != null && channelRaw in 0..15) {
+            settingsPrefs.edit().putInt("channel", channelRaw).apply()
+        } else if (b.etChannel.text?.toString().orEmpty().isNotEmpty()) {
+            b.tilChannel.error = "Enter 0–15"
+            allOk = false
         }
 
         // Save audio settings

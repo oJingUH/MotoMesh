@@ -140,6 +140,31 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Channel / Network ID -->
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/tilChannel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/settings_channel_hint"
+                    android:textColorHint="@color/lo_text"
+                    app:boxBackgroundColor="#0D1117"
+                    app:boxStrokeColor="@color/lo_blue"
+                    app:helperText="@string/settings_channel_helper"
+                    app:helperTextEnabled="true">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/etChannel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLines="1"
+                        android:maxLength="2"
+                        android:textColor="@color/white"
+                        android:textColorHint="@color/lo_text" />
+
+                </com.google.android.material.textfield.TextInputLayout>
+
                 <TextView
                     android:id="@+id/tvRelayStatus"
                     android:layout_width="wrap_content"
