@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Contract:
  *  incoming frame → processIncoming() → returns (nodeId, meta) or null (drop)
- *  outbound frame → prependNodeId() + send via MeshEngine/LoRaDriver
+ *  outbound frame → prependNodeId() + send via MotoMeshEngine/LoRaDriver
  *
  * Seen-eviction: 5 s sliding window prevents expanding seen-table forever.
  */
@@ -21,7 +21,7 @@ object MeshForwarder {
     const val TAG = "MeshForwarder"
     const val MAX_HOPS = 5
     private const val DEDUPE_WINDOW_MS = 5_000L
-    const val PAYLOAD_OFFSET = 4    // payload starts at byte 4 of the frame
+    const val PAYLOAD_OFFSET = 5    // header: sig(1) + seq(2) + nodeId(1) + hopCount(1)
 
     private val seen = ConcurrentHashMap<Long, Long>()
     private val frameSeq = AtomicLong(0)
@@ -34,7 +34,7 @@ object MeshForwarder {
     init {
         // Start pumping our outbound queue into LoRaDriver in a long-running coroutine.
         // The caller supplies the scope — see start() below in companion object bridge
-        // or let MotoMeshEngine own it.
+        // or let MotoMotoMeshEngine own it.
     }
 
     private val txInFlight = ThreadLocal.withInitial { false }
@@ -60,12 +60,12 @@ object MeshForwarder {
         // Byte 0: signature (0x00 per RYLR993 raw mode)
         buf[0] = 0x00
         // Bytes 1–2: 16-bit sequence (little-endian, wraps at 65536)
-        //   buf[1] = seq lo, buf[2] = seq hi
-        // Byte 3: local node ID
-        // processIncoming() reconstructs: seq = raw[1] or (raw[2] shl 8), nodeId = raw[3]
         buf[1] = (seq and 0xFF).toByte()         // seq LSB (16-bit)
         buf[2] = ((seq ushr 8) and 0xFF).toByte() // seq MSB
+        // Byte 3: local node ID
         buf[3] = (localNodeId and 0xFF).toByte()  // node ID
+        // Byte 4: hop count (0 on first send, incremented by each forwarder)
+        buf[4] = 0
         System.arraycopy(data, 0, buf, PAYLOAD_OFFSET, data.size)
         return buf
     }
@@ -85,7 +85,7 @@ object MeshForwarder {
         }
         // Bytes 1–2: 16-bit sequence number (little-endian)
         val seq    = (raw[1].toInt() and 0xFF) or ((raw[2].toInt() and 0xFF) shl 8)
-        // Byte 3: source node ID
+        // Byte 3: source node ID (unchanged across hops)
         val nodeId = (raw[3].toInt() and 0xFF).toShort()
 
         if (nodeId == localNodeId.toShort()) {
@@ -102,10 +102,11 @@ object MeshForwarder {
         val stale = now - DEDUPE_WINDOW_MS
         seen.entries.removeIf { it.value < stale }
 
-        // Re-encode for forwarding : increment hops byte (at index 3 so payload stays intact)
-        val forwarded = raw.clone()
-        forwarded[3] = ((forwarded[3].toInt() and 0xFF) + 1).toByte()
-        if (forwarded[3].toInt() and 0xFF <= MAX_HOPS) {
+        // Re-encode for forwarding: increment hop count at byte 4
+        val hopCount = (raw[4].toInt() and 0xFF) + 1
+        if (hopCount < MAX_HOPS) {
+            val forwarded = raw.clone()
+            forwarded[4] = hopCount.toByte()
             out.add(forwarded)
         }
 

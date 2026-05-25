@@ -1,17 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Primary palette — low blue to reduce headlight glare in cabin -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="accent_blue">#7EE8FA</color>
-    <color name="accent_green">#B5FFDA</color>
-    <color name="lo_red">#FF5050</color>
-    <color name="lo_yellow">#FFC658</color>
-    <color name="lo_blue">#7EE8FA</color>
-    <color name="lo_green">#5FE88A</color>
-    <color name="lo_text">#8B949E</color>
+    <color name="accent_blue">#B5FFDA</color>   <!-- powered tone: info · link · highlight -->
+    <color name="accent_green">#B5FFDA</color>  <!-- TX active · success (same as accent_blue: unified palette) -->
 
-    <!-- Rider icon tint in node list -->
+    <!-- Connection state dots -->
+    <color name="lo_red">#FF6F6F</color>         <!-- disconnected / error -->
+    <color name="lo_yellow">#FFC658</color>      <!-- connecting / scanning -->
+    <color name="lo_blue">#B5FFDA</color>        <!-- connected / active -->
+    <color name="lo_green">#22FF88</color>       <!-- cellular available / confirmed green -->
+
+    <!-- Text colours -->
+    <color name="lo_text">#8B949E</color>        <!-- body text on dark bg -->
+    <color name="lo_text_dim">#484F58</color>    <!-- disabled / placeholder -->
+    <color name="tx_active">#22FF88</color>      <!-- TX in-flight highlight -->
+
+    <!-- Rider node icon (row background + foreground tint) -->
     <color name="rider_icon_dim">#555F6D</color>
-    <color name="rider_icon_active">#7EE8FA</color>
+    <color name="rider_icon_active">#B5FFDA</color>
+    <color name="row_tx_ring">#22FF88</color>    <!-- left-border accent when TX active -->
+    <color name="pb_bg">#1C2433</color>          <!-- voice progress bar track -->
+    <color name="pb_good">#7EE8FA</color>        <!-- voice bar: low packet loss -->
+    <color name="pb_bad">#FF5050</color>         <!-- voice bar: high packet loss -->
 
 </resources>

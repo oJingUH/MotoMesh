@@ -2,48 +2,68 @@
 <resources>
     <string name="app_name">MotoMesh</string>
 
-    <!-- Buttons -->
+    <!-- ── Controls ─────────────────────────────────────────────────────── ▶ -->
     <string name="btn_mute">Mute</string>
     <string name="btn_unmute">Unmute</string>
-    <string name="btn_connect">Connect LoRa</string>
-
-    <!-- LoRa connection state in the status bar -->
+    <string name="btn_connect">Connect</string>
     <string name="conn_disconnected">Disconnected</string>
-    <string name="conn_connecting">Connecting…</string>
     <string name="conn_connected">Connected</string>
+    <string name="conn_connecting">Connecting…</string>
     <string name="conn_scanning">Scanning…</string>
 
-    <!-- LoRa mode label in the status bar -->
-    <string name="conn_loopback">Loopback</string>
-    <string name="conn_lora">LoRa</string>
+    <!-- Mode badges -->
+    <string name="conn_loopback">LOOPBACK</string>
+    <string name="conn_lora">LORA</string>
+    <string name="conn_cellular_connected">CELLULAR</string>
+    <string name="conn_cellular_failed">Cellular failed</string>
+    <string name="conn_cellular_connecting">Cellular…</string>
 
-    <!-- Node list packet loss display -->
+    <!-- ── Node list ────────────────────────────────────────────────────── ▶ -->
+    <string name="rider_icon_desc">Rider node</string>
     <string name="label_packet_loss_pct" translatable="false">0%</string>
-
-    <!-- Default hints — overwritten at runtime by MainActivity observers -->
     <string name="hint_rssi" translatable="false">– dBm</string>
     <string name="hint_nodes" translatable="false">– nodes</string>
 
-    <!-- Permission toasts / dialogs -->
-    <string name="toast_no_ble_devices">No RYLR993 devices found nearby.</string>
-    <string name="dialog_scanning_title">Scanning for LoRa modules</string>
-    <!-- Transport connection buttons (loopback entry point dialog) -->
-    <string name="dialog_pick_transport_title">Connect via</string>
-    <string name="transport_lora">LoRa BLE</string>
-    <string name="transport_cellular">Cellular TCP</string>
-
-    <!-- Cellular states in the status bar -->
-    <string name="conn_cellular_connected">Cellular</string>
-    <string name="conn_cellular_failed">Cellular failed — tap to retry</string>
-    <string name="conn_cellular_connecting">Connecting…</string>
-
-    <!-- Rider icon content description -->
-    <string name="rider_icon_desc">Rider node</string>
-
-    <!-- Relay settings dialog -->
-    <string name="settings_desc">Relay settings</string>
+    <!-- ── Settings ────────────────────────────────────────────────────── ▶ -->
+    <string name="settings_desc">Settings</string>
     <string name="settings_relay_title">Relay server</string>
     <string name="settings_relay_host_hint">Relay host (e.g. 10.0.2.2)</string>
     <string name="settings_relay_port_hint">Relay port (e.g. 60005)</string>
+    <string name="settings_profile_title">Your Profile</string>
+    <string name="settings_username_hint">Enter your callsign…</string>
+    <string name="settings_username_saved">Callsign saved</string>
+    <string name="toast_username_blocked">That callsign is not allowed</string>
+    <string name="toast_username_too_short">3 characters minimum</string>
+    <string name="toast_username_too_long">20 characters maximum</string>
+    <string name="toast_relay_saved">Relay saved</string>
+    <string name="toast_relay_invalid_port">Port must be between 1 and 65535</string>
+    <string name="settings_network_title">Network</string>
+    <string name="settings_audio_title">Audio</string>
+    <string name="about_version" translatable="true">%1$s version %2$s</string>
+    <string name="about_message">MotoMesh — open-source OrangLoRa mesh voice chat for motorcyclists.</string>
+
+    <!-- ── Audio stub ─────────────────────────────────────────────────── ▶ -->
+    <string name="settings_audio_stub">VOX delay, ducking threshold, and noise gate controls — coming in a future update.</string>
+
+    <!-- ── Audio settings ─────────────────────────────────────────────── ▶ -->
+    <string name="settings_vox_threshold">VOX threshold</string>
+    <string name="settings_vox_threshold_summary">Sensitivity: %1$d (higher = louder voice required to duck music)</string>
+    <string name="settings_duck_depth">Duck depth</string>
+    <string name="settings_duck_depth_summary">Music volume drops to %1$d%% when voice detected</string>
+
+    <!-- ── General UI ─────────────────────────────────────────────────── ▶ -->
+    <string name="btn_save_settings">Save Settings</string>
+
+    <!-- ── Toast / dialogs ──────────────────────────────────────────────────▶ -->
+    <string name="dialog_pick_transport_title">Connect via</string>
+    <string name="transport_lora">LoRa BLE</string>
+    <string name="transport_cellular">Cellular TCP</string>
+    <string name="dialog_scanning_title">Scanning for LoRa modules</string>
+    <string name="dialog_username_title">Set Your Callsign</string>
+    <string name="dialog_username_message">Your callsign is visible to all riders in the mesh.</string>
+    <string name="toast_no_ble_devices" translatable="true">No RYLR993 devices found nearby.</string>
+    <string name="toast_blocked_word" translatable="false">That word is not allowed.</string>
+    <string name="toast_username_too_red_pink">Callsign too short — 3 characters minimum.</string>
+    <string name="toast_username_too_long_red_pink">Callsign must be 20 characters or fewer.</string>
 
 </resources>

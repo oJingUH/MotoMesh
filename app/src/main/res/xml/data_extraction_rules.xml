@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Data extraction rules for Auto Backup (allowBackup=false below makes this advisory).
+
+  MotoMesh is a zero-trust chat app: no user data should leave the device via
+  backup or restore. MotoMesh state (transport mode, relay config) lives in
+  Application-level caches only — no SharedPreferences or database backups.
+-->
+<data-extraction-rules>
+    <!-- Cloud backup: exclude everything — lo_blue, lo_text, rider entries included -->
+    <cloud-backup>
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+    </cloud-backup>
+</data-extraction-rules>

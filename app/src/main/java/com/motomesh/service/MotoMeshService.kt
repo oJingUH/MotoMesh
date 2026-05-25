@@ -23,7 +23,9 @@ import com.motomesh.audio.DuckingController
 import com.motomesh.audio.AudioPipeline
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.motomesh.mesh.NodeTable
 
 /**
  * MotoMeshService — foreground service that holds the voice pipeline and
@@ -53,14 +55,15 @@ class MotoMeshService : Service() {
         fun start(context: Context, transport: TransportMode = TransportMode.LOOPBACK) {
             transportMode = transport
             val intent = Intent(context, MotoMeshService::class.java).apply {
-                putExtra(EXTRA_TRANSPORT, transport)
+                putExtra(EXTRA_TRANSPORT, transport.name)
             }
             context.startForegroundService(intent)
         }
 
         fun getTransport(): TransportMode = transportMode
 
-        const val EXTRA_TRANSPORT = "extra_transport"
+        const val EXTRA_TRANSPORT: String = "extra_transport"
+        const val ACTION_RELOAD_AUDIO: String = "com.motomesh.action.RELOAD_AUDIO"
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob())
@@ -86,6 +89,11 @@ class MotoMeshService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Check for audio-reload signal from SettingsActivity
+        if (intent?.action == ACTION_RELOAD_AUDIO) {
+            reloadAudioSettings()
+            return START_STICKY
+        }
         // Promote to foreground asap — this is the guaranteed entry point for
         // a startForegroundService()-launched service (onCreate can be brief).
         promoteForeground()
@@ -151,6 +159,41 @@ class MotoMeshService : Service() {
         startForeground(NOTIF_ID, notification)
     }
 
+    /** Update the persistent notification with current transport mode and rider count. */
+    private fun startNotificationUpdater() {
+        val ctx: Context = this@MotoMeshService
+        serviceScope.launch {
+            NodeTable.nodeFlow.collectLatest { nodes ->
+                val modeLabel = when (transportMode) {
+                    TransportMode.LOOPBACK -> "Loopback"
+                    TransportMode.LORA -> "LoRa"
+                    TransportMode.CELLULAR -> "Cellular"
+                }
+                val riderCount = nodes.count { it.isAlive }
+                val text = if (riderCount == 0) "$modeLabel — idle"
+                    else "$modeLabel — $riderCount rider${if (riderCount != 1) "s" else ""}"
+
+                val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                val launchIntent = Intent(ctx, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val pi = PendingIntent.getActivity(
+                    ctx, 0, launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                val notification = NotificationCompat.Builder(ctx, NOTIF_CHANNEL_ID)
+                    .setContentTitle(ctx.getString(R.string.app_name))
+                    .setContentText(text)
+                    .setSmallIcon(android.R.drawable.ic_dialog_info)
+                    .setContentIntent(pi)
+                    .setOngoing(true)
+                    .setPriority(NotificationCompat.PRIORITY_LOW)
+                    .build()
+                nm.notify(NOTIF_ID, notification)
+            }
+        }
+    }
+
     // ─── Engine boot ─────────────────────────────────────────────────
 
     private fun boot() {
@@ -159,7 +202,14 @@ class MotoMeshService : Service() {
 
         // DuckingController: scope = serviceScope.coroutineContext (not serviceScope itself,
         // which is a CoroutineScope, not a CoroutineContext); context = this Service.
+        // Read user audio prefs from moto_settings SharedPreferences.
+        val audioPrefs = getSharedPreferences("moto_settings", MODE_PRIVATE)
+        val voxThreshold = audioPrefs.getInt("vox_threshold", 1200).toShort().coerceIn(800, 8000)
+        val duckDepthPct = audioPrefs.getInt("duck_depth_pct", 80).coerceIn(0, 90)
+        val duckGain = (100 - duckDepthPct) / 100f  // 80% → 0.20, 0% → 1.0
         duckingController = DuckingController(
+            voiceThreshold = voxThreshold,
+            musicDuckedGain = duckGain,
             context = this,
             scope  = serviceScope.coroutineContext
         )
@@ -172,6 +222,26 @@ class MotoMeshService : Service() {
             duckingController?.pushVoiceRms(rms)
         }
         audioPipeline?.start()
+
+        // Live notification: transport mode + rider count updates reactively
+        startNotificationUpdater()
+    }
+
+    /** Re-read audio prefs and recreate DuckingController without restarting the service. */
+    private fun reloadAudioSettings() {
+        Log.i(TAG, "reloadAudioSettings — re-reading prefs from SettingsActivity")
+        duckingController?.stop()
+        val audioPrefs = getSharedPreferences("moto_settings", MODE_PRIVATE)
+        val voxThreshold = audioPrefs.getInt("vox_threshold", 1200).toShort().coerceIn(800, 8000)
+        val duckDepthPct = audioPrefs.getInt("duck_depth_pct", 80).coerceIn(0, 90)
+        val duckGain = (100 - duckDepthPct) / 100f
+        duckingController = DuckingController(
+            voiceThreshold = voxThreshold,
+            musicDuckedGain = duckGain,
+            context = this,
+            scope  = serviceScope.coroutineContext
+        )
+        Log.i(TAG, "Audio settings reloaded: voxThreshold=$voxThreshold duckGain=$duckGain")
     }
 
     // ─── Permissions ─────────────────────────────────────────────────

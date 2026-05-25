@@ -21,9 +21,11 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.ActivityCompat
 import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withTimeout
 import java.util.UUID
 
 /**
@@ -57,6 +59,13 @@ object RYLR993Ble {
     private val _rxPackets = MutableStateFlow<ByteArray?>(null)
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
+
+    // ─── AT command infrastructure ─────────────────────────────────
+    // Serialises AT command/response round-trips over the BLE GATT notify
+    // characteristic. The Rx data path is paused while an AT command is in
+    // flight so LoRa frames and AT text never interleave.
+    @Volatile private var _pendingAtResponse: CompletableDeferred<String>? = null
+    private val _atMode = java.util.concurrent.atomic.AtomicBoolean(false)
 
     // ─── Initialize ─────────────────────────────────────────────┐
     // Scans and connects should be called after this returns true.  │
@@ -208,6 +217,52 @@ fun scanForDevices(timeoutMs: Long = 8_000L): List<BluetoothDevice> {
 
     fun rxPackets(): StateFlow<ByteArray?> = _rxPackets.asStateFlow()
 
+    // ─── AT command transport ──────────────────────────────────────│
+    // ─────────────────────────────────────────────────────────────────
+
+    /**
+     * Send an AT command to the RYLR993 and wait for its response.
+     *
+     * Writes an ASCII `\r\n`-terminated string to the write characteristic,
+     * then waits for the matching text response on the notify characteristic.
+     *
+     * Only one AT round-trip is in-flight at a time. A second call that arrives
+     * while the first is still pending throws [IllegalStateException].
+     *
+     * @param cmd        Command without `AT+` prefix  e.g. `"FREQ?"` or `"ADDRESS=1"`
+     * @param timeoutMs  Hard deadline; a [CancellationException] is thrown on expiry
+     * @return           The raw response text, trimmed  e.g. `"+OK"` or `"+FREQ:868.000"`
+     */
+    suspend fun sendAtCommand(cmd: String, timeoutMs: Long = 5_000L): String {
+        // Fast-path reentrancy check
+        if (!_atMode.compareAndSet(false, true)) {
+            throw IllegalStateException("AT exchange already in-flight")
+        }
+        check(gatt != null && writeCharacteristic != null) {
+            "GATT not ready — connectToDeviceSync() must be called first"
+        }
+        _pendingAtResponse = CompletableDeferred<String>()
+        val raw = "$cmd\r\n".toByteArray(Charsets.US_ASCII)
+
+        @Suppress("DEPRECATION")   // writeCharacteristic.value / gatt.writeCharacteristic deprecated API 33+
+        writeCharacteristic!!.value = raw
+        @Suppress("DEPRECATION")
+        gatt!!.writeCharacteristic(writeCharacteristic!!)
+
+        return try {
+            withTimeout(timeoutMs) { _pendingAtResponse!!.await() }
+        } catch (_: TimeoutCancellationException) {
+            _pendingAtResponse = null
+            _atMode.set(false)
+            throw CancellationException("AT [$cmd] timed out after ${timeoutMs}ms")
+        } finally {
+            if (!(_pendingAtResponse?.isCompleted ?: false)) {
+                _pendingAtResponse = null
+                _atMode.set(false)
+            }
+        }
+    }
+
     // ─── BLE GATT callback ───────────────────────────────────────
 
     @SuppressLint("MissingPermission")
@@ -254,7 +309,15 @@ fun scanForDevices(timeoutMs: Long = 8_000L): List<BluetoothDevice> {
             gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic
         ) {
             if (characteristic.uuid == CHAR_NOTIFY) {
-                characteristic.value?.let { _rxPackets.value = it }
+                val data = characteristic.value ?: return
+                if (_atMode.get()) {
+                    // AT round-trip in progress — parse text response
+                    val text = String(data, Charsets.US_ASCII)
+                    _pendingAtResponse?.complete(text.trim())
+                } else {
+                    // Data mode — forward raw LoRa frame to the data path
+                    _rxPackets.value = data
+                }
             }
         }
 

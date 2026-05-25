@@ -6,20 +6,30 @@ plugins {
 
 android {
     namespace = "com.motomesh"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.motomesh"
         minSdk = 29          // AudioPlaybackCapture requires API 29
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
-        versionName = "0.1-alpha"
+        versionName = "0.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("releaseSigning") {
+            storeFile = file("motomesh-release-key.jks")
+            storePassword = "motomesh2026"
+            keyAlias = "motomesh-key"
+            keyPassword = "motomesh2026"
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs["releaseSigning"]
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -64,6 +74,8 @@ dependencies {
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.robolectric:robolectric:4.12.2")
+    testImplementation("androidx.test:core:1.5.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }

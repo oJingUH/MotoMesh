@@ -26,7 +26,7 @@ import java.util.concurrent.LinkedBlockingQueue
  *  - Availability: ConnectivityManager.NetworkCallback detects cellular data presence.
  *  - Outbound: Opus frame → [FRAME_HEADER 0xBB][len:2B LE][opus payload] → TCP socket write.
  *  - Inbound: TCP socket read pump parses same framing, pushes raw Opus payloads into
- *    [inboundQueue] which MotoMeshEngine drains via takeCellularFrame() → enqueueInbound().
+ *    [inboundQueue] which MotoMotoMeshEngine drains via takeCellularFrame() → enqueueInbound().
  *
  * No SIP stack. Pure socket + binary framing. Relay server is a thin TCP forwarder
  * that relays byte-stream frames between connected riders (handled externally).
@@ -68,12 +68,17 @@ object CellularBridge {
     private const val FRAME_HEADER: Byte = 0xBB.toByte()
     private const val FRAME_HEADER_SIZE = 1
     private const val LEN_FIELD_SIZE = 2   // uint16 LE
-    private const val FRAME_OVERHEAD = FRAME_HEADER_SIZE + LEN_FIELD_SIZE
+    private const val NODE_ID_SIZE = 2     // uint16 LE, matches MeshForwarder node ID width
+    private const val FRAME_OVERHEAD = FRAME_HEADER_SIZE + LEN_FIELD_SIZE + NODE_ID_SIZE
     private const val MAX_FRAME_BYTES = 4096   // safety cap for a single voice frame
+
+    // Inbound frame callback: set by MotoMeshEngine so it can register NodeTable
+    // and enqueue the stripped Opus payload for AudioPipeline.
+    var onInboundFrame: ((nodeId: Int, opusPayload: ByteArray) -> Unit)? = null
 
     // Thread-safe inbound queue: Engine pulls from here (LinkedBlockingQueue is preferred by
     // Kotlin coroutines for blocking-drain; takeCellularFrame() blocks without blocking a
-    // dispatcher thread because MotoMeshEngine tx/rx pumps already run on Dispatchers.Default)
+    // dispatcher thread because MotoMotoMeshEngine tx/rx pumps already run on Dispatchers.Default)
     private val inboundQueue = LinkedBlockingQueue<ByteArray>(256)
 
     private var peerSocket: Socket? = null
@@ -116,24 +121,34 @@ object CellularBridge {
 
     /**
      * Enqueue one Opus frame for cellular delivery.
-     * Writes [FRAME_HEADER][len LE][opus payload] to the TCP output stream.
-     * Returns false if the socket is not connected or the write fails.
+     * Writes [FRAME_HEADER][len LE][nodeId LE][opus payload] to the TCP output stream.
+     * The relay server forwards the full frame including nodeId so recipients can
+     * identify the speaking rider.
+     *
+     * @param data   Raw Opus payload (20ms, ~40-120 bytes)
+     * @param nodeId This rider's mesh node ID (from MeshForwarder)
+     * @return false if the socket is not connected or the write fails.
      */
-    fun sendFrame(data: ByteArray): Boolean {
+    fun sendFrame(data: ByteArray, nodeId: Int = 0): Boolean {
         val out = peerOutput ?: run {
             Log.w(TAG, "sendFrame: socket not connected")
             return false
         }
-        if (data.size > MAX_FRAME_BYTES) {
-            Log.w(TAG, "sendFrame: payload ${data.size} B exceeds MAX_FRAME_BYTES=$MAX_FRAME_BYTES")
+        val totalPayload = NODE_ID_SIZE + data.size
+        if (totalPayload > MAX_FRAME_BYTES) {
+            Log.w(TAG, "sendFrame: frame ${totalPayload} B exceeds MAX_FRAME_BYTES=$MAX_FRAME_BYTES")
             return false
         }
         return try {
             val buf = ByteArray(FRAME_OVERHEAD + data.size)
             buf[0] = FRAME_HEADER
-            // uint16 LE: payload length
-            buf[1] = (data.size and 0xFF).toByte()
-            buf[2] = ((data.size ushr 8) and 0xFF).toByte()
+            // uint16 LE: total payload (nodeId + opus)
+            buf[1] = (totalPayload and 0xFF).toByte()
+            buf[2] = ((totalPayload ushr 8) and 0xFF).toByte()
+            // uint16 LE: sender node ID
+            buf[3] = (nodeId and 0xFF).toByte()
+            buf[4] = ((nodeId ushr 8) and 0xFF).toByte()
+            // Opus payload starts at offset 5
             System.arraycopy(data, 0, buf, FRAME_OVERHEAD, data.size)
             synchronized(out) { out.write(buf) }
             true
@@ -182,8 +197,11 @@ object CellularBridge {
     }
 
     /**
-     * Parses [FRAME_HEADER][len][opus…] frames off the TCP byte stream and
-     * pushes each Opus payload into inboundQueue for the engine to consume.
+     * Parses [FRAME_HEADER][len LE][nodeId LE][opus…] frames off the TCP byte stream.
+     * For each valid frame:
+     *  - Extracts the sender node ID
+     *  - Calls [onInboundFrame] callback so MotoMeshEngine can register NodeTable
+     *  - Pushes the stripped Opus payload into inboundQueue for AudioPipeline
      */
     private suspend fun readPump(input: InputStream) {
         withContext(Dispatchers.IO) {
@@ -206,17 +224,17 @@ object CellularBridge {
                     Log.w(TAG, "readPump: unexpected byte 0x${(headerBuf[0].toInt() and 0xFF).toString(16)} — resync")
                     continue
                 }
-                val payloadLen = (headerBuf[2].toInt() and 0xFF).let { hi ->
+                val totalPayload = (headerBuf[2].toInt() and 0xFF).let { hi ->
                     ((headerBuf[1].toInt() and 0xFF) or (hi shl 8))
                 }
-                if (payloadLen <= 0 || payloadLen > MAX_FRAME_BYTES) {
-                    Log.w(TAG, "readPump: invalid payload length $payloadLen — resync")
+                if (totalPayload <= NODE_ID_SIZE || totalPayload > MAX_FRAME_BYTES) {
+                    Log.w(TAG, "readPump: invalid payload length $totalPayload — resync")
                     continue
                 }
-                // 2. Read payload
+                // 2. Read full payload (nodeId + opus)
                 read = 0
-                while (read < payloadLen) {
-                    val n = input.read(payloadBuf, read, payloadLen - read)
+                while (read < totalPayload) {
+                    val n = input.read(payloadBuf, read, totalPayload - read)
                     if (n < 0) {
                         Log.w(TAG, "readPump: stream closed mid-payload")
                         cellularState.value = CellularState.UNAVAILABLE
@@ -224,9 +242,16 @@ object CellularBridge {
                     }
                     read += n
                 }
-                val frame = payloadBuf.copyOf(payloadLen)
-                if (!inboundQueue.offer(frame)) {
-                    Log.w(TAG, "readPump: inboundQueue full — dropping frame ($payloadLen B)")
+                // 3. Extract node ID (first NODE_ID_SIZE bytes of payload)
+                val nodeId = (payloadBuf[0].toInt() and 0xFF) or
+                             ((payloadBuf[1].toInt() and 0xFF) shl 8)
+                // 4. Extract Opus payload (remaining bytes)
+                val opusLen = totalPayload - NODE_ID_SIZE
+                val opusPayload = payloadBuf.copyOfRange(NODE_ID_SIZE, totalPayload)
+                // 5. Notify engine via callback, then push Opus to audio queue
+                onInboundFrame?.invoke(nodeId, opusPayload)
+                if (!inboundQueue.offer(opusPayload)) {
+                    Log.w(TAG, "readPump: inboundQueue full — dropping frame ($opusLen B, node $nodeId)")
                 }
             }
         }

@@ -9,6 +9,8 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
 import android.widget.Toast
@@ -61,6 +63,22 @@ class MainActivity : ComponentActivity() {
     // Mute state
     private var isMuted = false
 
+    // VOX pulse animation — green transmitter-indicator dot
+    private var voxAnim: Animation? = null
+
+    private fun startVoxPulse() {
+        if (voxAnim == null) {
+            voxAnim = AnimationUtils.loadAnimation(this, R.anim.vox_pulse)
+        }
+        b.vVox.startAnimation(voxAnim)
+        b.vVox.isVisible = true
+    }
+
+    private fun stopVoxPulse() {
+        b.vVox.clearAnimation()
+        b.vVox.isVisible = false
+    }
+
     // Permission handle
     private val permLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -89,19 +107,35 @@ class MainActivity : ComponentActivity() {
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
 
+        NodeTable.setUsername(
+            getSharedPreferences("moto_settings", MODE_PRIVATE)
+                .getString("username", null)
+        )
+        migrateLegacyRelayPrefs()
+
         setupRecycler()
         setupButtons()
         setupSettingsButton()
+        observeNodeTable()
         requestPermissions(transportMode)
         MotoMeshService.start(this, transport = transportMode)
         updateConnectButton()
     }
 
+    private fun migrateLegacyRelayPrefs() {
+        val prefs = getSharedPreferences("moto_settings", MODE_PRIVATE)
+        val host = prefs.getString("relay_host", null) ?: return
+        getSharedPreferences("relay_config", MODE_PRIVATE).edit()
+            .putString("relay_host", host)
+            .putInt("relay_port", prefs.getInt("relay_port", 60005))
+            .apply()
+    }
+
     // ─── Recycler ───────────────────────────────────────────────────
 
     private fun setupRecycler() {
-        nodeAdapter = NodeAdapter { _ ->
-            // TODO: node detail — RSSI + loss-rate history overlay
+        nodeAdapter = NodeAdapter { node ->
+            showRiderDetailSheet(node)
         }
         b.nodeList.apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
@@ -109,20 +143,52 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // ─── Node detail bottom sheet ─────────────────────────────────
+
+    private fun showRiderDetailSheet(node: NodeRecord) {
+        val lastHeardSec = (System.currentTimeMillis() - node.lastSeenMs) / 1000
+        val lastHeardText = when {
+            lastHeardSec < 5 -> "just now"
+            lastHeardSec < 60 -> "${lastHeardSec}s ago"
+            lastHeardSec < 3600 -> "${lastHeardSec / 60}m ${lastHeardSec % 60}s ago"
+            else -> "${lastHeardSec / 3600}h ago"
+        }
+        val statusText = if (node.isAlive) "Alive" else "Stale"
+        val lossPct = (node.lossRate * 100).toInt()
+        val displayName = node.displayName
+
+        val builder = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+        builder.setTitle(displayName)
+        builder.setIcon(R.drawable.ic_rider)
+
+        val info = """
+            │ ID:         Rider #${node.nodeId}
+            │ Callsign:   ${node.username ?: "—"}
+            │ Status:     $statusText
+            │ RSSI:       ${node.rssi} dBm
+            │ Loss rate:  $lossPct%
+            │ Last heard: $lastHeardText
+        """.trimIndent()
+
+        builder.setMessage(info)
+        builder.setPositiveButton(android.R.string.ok, null)
+        builder.show()
+    }
+
     // ─── Node table observer ─────────────────────────────────────────
 
     private fun observeNodeTable() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                while (isActive) {
-                    val snapshot = NodeTable.snapshot
+                NodeTable.nodeFlow.collectLatest { snapshot ->
                     nodeAdapter.submitList(snapshot)
                     val count = snapshot.size
                     b.tvNodeCount.text = if (count == 1) "1 node" else "$count nodes"
-                    delay(250)
                 }
             }
         }
+        // Periodic stale-node cleanup (runs on Dispatchers.Default internally)
+        NodeTable.startPurgeLoop(lifecycleScope)
     }
 
     // ─── Connection state observer (LoRa) ────────────────────────────
@@ -263,20 +329,18 @@ class MainActivity : ComponentActivity() {
 
         b.btnMute.setOnClickListener {
             isMuted = !isMuted
-            b.btnMute.text = if (isMuted) getString(R.string.btn_unmute) else getString(R.string.btn_mute)
-            b.btnMute.setTextColor(
-                ContextCompat.getColor(
-                    this,
-                    if (isMuted) R.color.lo_red else R.color.accent_green
-                )
+            b.btnMute.setIconResource(if (isMuted) R.drawable.ic_mic_off else R.drawable.ic_mic)
+            b.btnMute.iconTint = ContextCompat.getColorStateList(
+                this,
+                if (isMuted) R.color.lo_red else R.color.accent_green
             )
-            b.vVox.isVisible = !isMuted
+            if (isMuted) stopVoxPulse() else startVoxPulse()
         }
     }
 
     private fun setupSettingsButton() {
-        b.btnSettings.setOnClickListener {
-            showRelaySettingsDialog()
+        b.btnSettingsIcon.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
         }
     }
 
@@ -476,7 +540,7 @@ class MainActivity : ComponentActivity() {
             )
         }
         permLauncher.launch(perms)
-        // TODO cellular: add relay connect callback after perms granted
+        // Cellular connect already called from permLauncher callback (see lines 73-78)
     }
 
     // ─── Lifecycle ───────────────────────────────────────────────────
@@ -486,6 +550,8 @@ class MainActivity : ComponentActivity() {
         rssiJob?.cancel()
         cellularObserver?.cancel()
         cellularObserver = null
+        stopVoxPulse()
+        voxAnim = null
         super.onDestroy()
     }
 }

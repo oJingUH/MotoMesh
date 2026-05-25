@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Optimized for rider ergonomics (MotoMesh QoL pass 2):
+  - Single status bar row: Connection state + transport mode + RSSI + node count (condensed)
+  - Controls row: large thickness hit-target buttons, Connect centered (thumb-reachable),
+    Mute left, Settings right
+  - Top bar: app name + music ducked bar header
+  - guideline_bottom at 86% — freezes status + controls in the bottom 14% (214 px on 1080p)
+  - Active TX / VOX indicated via accent color in the status bar
+-->
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
@@ -13,202 +22,207 @@
         android:background="#0D1117"
         tools:context=".ui.MainActivity">
 
+        <!-- ── Top bar: app name + music bar ─────────────────────────────── -->
+
         <TextView
-            android:id="@+id/title"
+            android:id="@+id/tvTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
-            android:textSize="24sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:textColor="@color/lo_blue"
-            app:layout_constraintEnd_toEndOf="parent"
+            android:textColor="@color/lo_text"
+            app:layout_constraintBottom_toTopOf="@id/musicBar"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="@id/guideline_top" />
-
-        <!-- musicBar — ducks under voice; sits directly below title -->
 
         <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/musicBar"
             android:layout_width="0dp"
-            android:layout_height="4dp"
+            android:layout_height="3dp"
             android:backgroundTint="#0D1117"
             android:indeterminate="false"
             android:max="100"
+            app:layout_constraintBottom_toTopOf="@id/guideline_bar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/title" />
+            app:layout_constraintTop_toBottomOf="@id/tvTitle" />
 
         <androidx.constraintlayout.widget.Guideline
             android:id="@+id/guideline_top"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            app:layout_constraintGuide_percent="0.10" />
+            app:layout_constraintGuide_percent="0.06" />
 
-        <!-- nodeList spans the middle; constrained below title/musicBar + above controls -->
+        <!-- ── Rider list ─────────────────────────────────────────────────── -->
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/nodeList"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:background="#161B22"
-            app:layout_constraintBottom_toTopOf="@id/controls"
+            android:background="#0D1117"
+            app:layout_constraintBottom_toTopOf="@id/guideline_bar"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@id/musicBar"
             tools:listitem="@layout/item_node" />
 
-        <!-- controls + statusBar vertical chain pinned to bottom -->
+        <!-- ── guideline_bar: top of the status + control area ────────────── -->
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guideline_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.86" />
+
+        <!-- ── Status bar (single lane, all status in one readable row) ────── -->
+        <!-- Layout order left-to-right: [State/Dot] [Mode] [RSSI] [NodeCount] [VOXdot] -->
+        <!-- Padding 4dp between elements keeps them distinctive at 12sp -->
 
         <LinearLayout
-            android:id="@+id/controls"
+            android:id="@+id/statusRow"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="#161B22"
-            android:gravity="center_vertical"
-            android:horizontalGap="16dp"
-            android:orientation="horizontal"
-            style="?android:attr/buttonBarStyle"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="14dp"
-            android:weightSum="2"
-            app:layout_constraintBottom_toTopOf="@id/guideline_bottom"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent">
-
-            <Button
-                style="?android:attr/buttonBarButtonStyle"
-                android:id="@+id/btnMute"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/btn_mute"
-                android:textColor="#FFB5B5"
-                android:backgroundTint="#2D1735" />
-
-            <Button
-                style="?android:attr/buttonBarButtonStyle"
-                android:id="@+id/btnConnect"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/btn_connect"
-                android:textColor="#B5FFDA"
-                android:backgroundTint="#162B20" />
-
-        </LinearLayout>
-
-        <!-- statusIndicators — single row: connection state + RSSI + node count -->
-
-        <LinearLayout
-            android:id="@+id/statusIndicators"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:background="#161B22"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingHorizontal="20dp"
-            android:paddingVertical="5dp"
-            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/ctrlRow"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/controls">
+            app:layout_constraintTop_toBottomOf="@id/guideline_bar">
 
-            <!-- Connection state indicator (left) -->
+            <!-- Dot: indicates connection / transport state -->
+            <View
+                android:id="@+id/vDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginEnd="6dp"
+                android:background="@color/lo_red"
+                android:shape="oval" />
 
-            <LinearLayout
+            <!-- State text: "Connected" / "Scanning…" / "Disconnected" etc. -->
+            <TextView
+                android:id="@+id/tvConnState"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                android:layout_marginEnd="6dp"
+                android:text="@string/conn_disconnected"
+                android:textColor="@color/lo_red"
+                android:textSize="12sp" />
 
-                <View
-                    android:id="@+id/vDot"
-                    android:layout_width="8dp"
-                    android:layout_height="8dp"
-                    android:layout_marginEnd="5dp"
-                    android:background="@color/lo_red"
-                    android:shape="oval" />
+            <!-- Mode badge: "LOOPBACK" | "LORA" | "CELLULAR" — tinted -->
+            <TextView
+                android:id="@+id/tvConnMode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="14dp"
+                android:background="@drawable/badge_mode_bg"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="@string/conn_loopback"
+                android:textColor="@color/lo_text"
+                android:textSize="10sp" />
 
-                <TextView
-                    android:id="@+id/tvConnState"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/conn_disconnected"
-                    android:textColor="@color/lo_red"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:id="@+id/tvConnMode"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="6dp"
-                    android:text="@string/conn_loopback"
-                    android:textColor="@color/lo_text"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <!-- RSSI — center, gravity end (pushes right here, forward h-gap pushes it to center) -->
+            <!-- RSSI: "-67 dBm" aligned right of status -->
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
             <TextView
                 android:id="@+id/tvRssi"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="20dp"
                 android:text="@string/hint_rssi"
+                android:textColor="@color/lo_text"
+                android:textSize="11sp"
+                android:textStyle="italic" />
+
+            <!-- Node count -->
+            <TextView
+                android:id="@+id/tvNodeCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="@string/hint_nodes"
                 android:textColor="@color/lo_text"
                 android:textSize="11sp" />
 
-            <!-- Node count (right) -->
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="0"
-                android:gravity="end">
-
-                <TextView
-                    android:id="@+id/tvNodeCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/hint_nodes"
-                    android:textColor="@color/lo_text"
-                    android:textSize="11sp" />
-
+            <!-- VOX dot: lit green when the local rider is speaking -->
             <View
                 android:id="@+id/vVox"
-                android:layout_width="6dp"
-                android:layout_height="6dp"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
                 android:layout_marginStart="10dp"
-                android:background="@color/accent_green"
+                android:background="@drawable/dot_vox"
                 android:shape="oval"
                 android:visibility="gone" />
 
-            <!-- Settings gear: opens relay host + port dialog when in CELLULAR mode -->
-
-            <ImageButton
-                android:id="@+id/btnSettings"
-                android:layout_width="30dp"
-                android:layout_height="30dp"
-                android:layout_marginStart="8dp"
-                android:background="@android:color/transparent"
-                android:contentDescription="@string/settings_desc"
-                app:srcCompat="@drawable/ic_settings_gear"
-                app:tint="@color/lo_text" />
-
         </LinearLayout>
 
-        </LinearLayout>
+        <!-- ── Controls row: Connect (+ Mute + Settings) ──────────────────── -->
 
-        <androidx.constraintlayout.widget.Guideline
-            android:id="@+id/guideline_bottom"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/ctrlRow"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            app:layout_constraintGuide_percent="0.78" />
+            android:weightSum="4"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/statusRow">
+
+            <!-- Mute — left, icon-only for glove ergonomics -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnMute"
+                style="@style/Widget.MotoMesh.IconButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="1"
+                android:text=""
+                android:textColor="@color/lo_red"
+                app:cornerRadius="8dp"
+                app:icon="@drawable/ic_mic"
+                app:iconGravity="textStart" />
+
+            <!-- Connect — center, largest of the three -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnConnect"
+                style="@style/Widget.MotoMesh.ConnectButton"
+                android:layout_width="0dp"
+                android:layout_height="58dp"
+                android:layout_marginStart="6dp"
+                android:layout_marginEnd="6dp"
+                android:layout_weight="2"
+                android:text="@string/btn_connect"
+                android:textColor="#B5FFDA"
+                app:cornerRadius="12dp"
+                app:icon="@drawable/ic_radio" />
+
+            <!-- Settings — right, visible icon button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSettingsIcon"
+                style="@style/Widget.MotoMesh.IconButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="6dp"
+                android:layout_weight="1"
+                android:text=""
+                app:cornerRadius="8dp"
+                app:icon="@drawable/ic_settings_gear"
+                app:iconGravity="textStart"
+                app:iconSize="22dp"
+                app:iconTint="@color/lo_text" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
-
 </layout>

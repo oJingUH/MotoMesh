@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <!-- Base Boombox rectangle-->
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M4,9H20V17H4V9Z" />
+    <!-- Left wave (arc up + semi-circle) -->
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M8,13
+            A2,2 0 0,0 12,9" />
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M6,13
+            A4,4 0 0,0 14,9" />
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M4,13
+            A6,6 0 0,0 16,9" />
+    <!-- Right wave (arc up + semi-circle) -->
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M16,9
+            A2,2 0 0,0 12,13" />
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M18,9
+            A4,4 0 0,0 10,13" />
+    <path
+        android:fillColor="@color/lo_text"
+        android:pathData="M20,9
+            A6,6 0 0,0 8,13" />
+</vector>

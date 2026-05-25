@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pulse the VOX dot alpha 0.3 → 1.0 → 0.3 every 1.2 s while transmitting.
+  Started/stopped programmatically in MainActivity.
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:repeatMode="reverse"
+    android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+    android:repeatCount="infinite"
+    android:duration="600">
+
+    <alpha
+        android:fromAlpha="0.3"
+        android:toAlpha="1.0" />
+</set>

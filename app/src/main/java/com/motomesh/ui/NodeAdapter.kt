@@ -13,19 +13,23 @@ import com.motomesh.mesh.NodeRecord
 
 /**
  * NodeAdapter — binds [NodeRecord] snapshots from NodeTable into the RecyclerView.
- * Highlights active nodes; greyful deputies that are silent, time-consuming.
  *
- * We use a Thread-Safe ListAdapter backed by DiffUtil.
- * All UI mutations happen on the main thread — this is the main thread's data binder.
- * Call [NodeAdapter.submitList] on the main thread; see [ListAdapter.submitList].usecase
- * for RSSI and loss rate visualization.
+ * Visual states (per row):
+ *  isAlive == false   → row is greyed, icon tint = rider_icon_dim, pbVoice hidden
+ *  isAlive == true    → pbVoice visible; colour updates by packet-loss threshold
+ *  local rider        → left-border accent (row_tx_ring tint) when transmitting
+ *
+ * Row layout: [icon + name/callsign/RSSI] [voice bar] [RSSI column] [loss % column]
+ * Click opens rider detail dialog (showRiderDetailSheet in MainActivity).
  */
 class NodeAdapter(
     private val onNodeClicked: (NodeRecord) -> Unit
 ) : ListAdapter<NodeRecord, NodeAdapter.VH>(Diff()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val binding = ItemNodeBinding.inflate(LayoutInflater.from(parent.context), parent, false)
+        val binding = ItemNodeBinding.inflate(
+            LayoutInflater.from(parent.context), parent, false
+        )
         return VH(binding)
     }
 
@@ -37,21 +41,26 @@ class NodeAdapter(
     inner class VH(private val b: ItemNodeBinding) : RecyclerView.ViewHolder(b.root) {
 
         fun bind(n: NodeRecord) {
-            b.tvNodeId.text = b.root.context.getString(R.string.node_label_rider, n.nodeId)
-            b.tvRssi.text = b.root.context.getString(R.string.node_label_rssi, n.rssi)
-            b.tvLoss.text = b.root.context.getString(R.string.node_label_loss, (n.lossRate * 100).toInt())
-            b.pbVoice.isVisible = n.isAlive
+            // ── Name + callsign ──────────────────────────────────────────
+            b.tvNodeId.text = n.displayName
+
+            // ── Voice activity bar (horizontal progress, ~30 px, carrier colour when alive)
             if (n.isAlive) {
-                b.pbVoice.progress = (n.lossRate * 100).toInt()
-                b.pbVoice.progressTintList = android.content.res.ColorStateList.valueOf(
-                    if (n.lossRate < 0.1f) android.graphics.Color.parseColor("#7EE8FA")
-                    else android.graphics.Color.parseColor("#FFB5B5")
-                )
+                b.pbVoice.isVisible = true
+                b.pbVoice.progress = (n.lossRate * 100).toInt().coerceAtMost(100)
+                val barTint = if (n.lossRate < 0.3f)
+                    R.color.pb_good else R.color.pb_bad
+                b.pbVoice.progressTintList =
+                    ContextCompat.getColorStateList(b.root.context, barTint)
+            } else {
+                b.pbVoice.isVisible = false
             }
-            // Rider icon: bright when alive, dim when stale
-            val tintRes = if (n.isAlive) R.color.rider_icon_active else R.color.rider_icon_dim
+
+            // ── Icon tint ─────────────────────────────────────────────────
+            val iconTint = if (n.isAlive)
+                R.color.rider_icon_active else R.color.rider_icon_dim
             b.ivIcon.setColorFilter(
-                ContextCompat.getColor(b.root.context, tintRes),
+                ContextCompat.getColor(b.root.context, iconTint),
                 android.graphics.PorterDuff.Mode.SRC_IN
             )
 

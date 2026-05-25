@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Motorcycle silhouette centered in the 108dp safe zone (66dp inner) -->
+    <!-- Rear wheel -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,72m-8,0a8,8 0,1 1,16 0a8,8 0,1 1,-16 0" />
+    <!-- Front wheel -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,72m-7,0a7,7 0,1 1,14 0a7,7 0,1 1,-14 0" />
+    <!-- Body/frame -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,54c-2,-4 2,-8 6,-10l6,4l-4,6z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,48l8,4c2,2 4,6 4,10l-2,2l-10,-6z" />
+    <!-- Mesh signal arcs -->
+    <path
+        android:fillColor="#00FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:pathData="M54,38 A18,18 0 0,1 78,56" />
+    <path
+        android:fillColor="#00FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:pathData="M48,34 A24,24 0 0,1 84,60" />
+    <path
+        android:fillColor="#00FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.5"
+        android:pathData="M42,30 A30,30 0 0,1 90,66" />
+</vector>

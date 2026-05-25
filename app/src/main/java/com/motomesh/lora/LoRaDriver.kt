@@ -40,8 +40,13 @@ object LoRaDriver {
 
     // ─── Initialise ────────────────────────────────────────────────
 
+    private var _appContext: Context? = null
+    private fun appContext(): Context =
+        _appContext ?: error("LoRaDriver.open() has not been called yet")
+
     fun open(context: Context): Boolean =
         RYLR993Ble.initialize(context).also { ok ->
+            _appContext = context.applicationContext
             Log.d(TAG, "BLE adapter ready=$ok")
         }
 
@@ -63,7 +68,11 @@ object LoRaDriver {
             val ok = withContext(Dispatchers.Default) {
                 RYLR993Ble.connectToDeviceSync(device)
             }
-            connectionState.value = if (ok) ConnectionState.CONNECTED else ConnectionState.FAILED
+            if (ok) {
+                configureModule()
+            } else {
+                connectionState.value = ConnectionState.FAILED
+            }
         } catch (e: Exception) {
             Log.e(TAG, "ConnectToDevice: ${e.message}")
             connectionState.value = ConnectionState.FAILED
@@ -79,10 +88,10 @@ object LoRaDriver {
             // the GATT callback thread (which may be Main on Pixel 9) is never
             // the same thread currently blocking on cb.await().
             withContext(Dispatchers.Default) { RYLR993Ble.connect() }
-            connectionState.value = when (RYLR993Ble.connectionState.value) {
-                RYLR993Ble.ConnectionState.CONNECTED -> ConnectionState.CONNECTED
-                RYLR993Ble.ConnectionState.FAILED  -> ConnectionState.FAILED
-                else                               -> ConnectionState.CONNECTING
+            when (RYLR993Ble.connectionState.value) {
+                RYLR993Ble.ConnectionState.CONNECTED -> { configureModule(); connectionState.value = ConnectionState.CONNECTED }
+                RYLR993Ble.ConnectionState.FAILED  -> connectionState.value = ConnectionState.FAILED
+                else                               -> connectionState.value = ConnectionState.CONNECTING
             }
         } catch (e: Exception) {
             Log.e(TAG, "Connect: ${e.message}")
@@ -120,6 +129,46 @@ object LoRaDriver {
     private fun deriveRssi(raw: ByteArray): Int {
         // last byte = signed raw RSSI (-128..127 range)
         return (raw.last().toInt() shl 24 shr 24)
+    }
+
+    // ─── Radio config (AT commands on the RYLR993 module) ───────────
+
+    /**
+     * Radio parameters sent to the module via AT commands after BLE connects.
+     * Non-zero values override defaults; pass `RadioConfig()` for EU defaults.
+     */
+    data class RadioConfig(
+        val nodeAddress:     Int    = 0,
+        val networkId:       Int    = 1,
+        val frequencyMHz:    Double = 868.0,          // EU default; use 915.0 for US
+        val spreadingFactor: Int    = 9,              // 7 = fast range, 12 = max range
+        val bandwidthKHz:    Int    = 125,
+        val codingRate:      Int    = 2,              // 0=4/5, 1=4/6, 2=4/7, 3=4/8
+        val loraWanMode:     Boolean = true           // false = P2P test mode
+    )
+
+    private suspend fun configureModule(config: RadioConfig = RadioConfig()) {
+        require(connectionState.value == ConnectionState.CONNECTED) {
+            "LoRaDriver: must be CONNECTED before running configureModule()"
+        }
+        val cmds = listOf(
+            "NWM=${if (config.loraWanMode) 1 else 0}",
+            "ADDRESS=${config.nodeAddress}",
+            "NETWORKID=${config.networkId}",
+            "FREQ=${config.frequencyMHz}",
+            "SF=${config.spreadingFactor}",
+            "BW=${config.bandwidthKHz}",
+            "CRF=${config.codingRate}"
+        )
+        for (cmd in cmds) {
+            Log.i(TAG, "AT+$cmd  …")
+            val resp = RYLR993Ble.sendAtCommand(cmd)
+            check(resp.contains("+OK")) {
+                "AT+$cmd returned '$resp' — expected +OK"
+            }
+            Log.i(TAG, "  -> $resp  ✓")
+        }
+        Log.i(TAG, "Module configured: $config")
     }
 
     // ─── Disconnect ───────────────────────────────────────────────
