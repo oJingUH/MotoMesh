@@ -259,87 +259,159 @@ DASHBOARD_HTML = r"""<!DOCTYPE html>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-         background: #0D1117; color: #C9D1D9; padding: 24px; }
-  h1 { color: #B5FFDA; font-size: 24px; margin-bottom: 4px; }
-  .subtitle { color: #6E7681; font-size: 13px; margin-bottom: 24px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .card { background: #161B22; border-radius: 10px; padding: 16px; }
-  .card .label { color: #6E7681; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
-  .card .value { color: #C9D1D9; font-size: 28px; font-weight: 700; margin-top: 4px; }
+         background: #0D1117; color: #C9D1D9; padding: 24px; min-height: 100vh; }
+
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .header .logo { width: 40px; height: 40px; border-radius: 10px; background: #1A3A2E;
+                  display: flex; align-items: center; justify-content: center;
+                  font-size: 20px; color: #22FF88; font-weight: bold; }
+  .header h1 { color: #B5FFDA; font-size: 22px; font-weight: 700; }
+  .header .status-badge { margin-left: auto; padding: 4px 14px; border-radius: 20px;
+                          font-size: 12px; font-weight: 600; background: #1A3A2E; color: #22FF88; }
+
+  .server-info { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  .info-chip { background: #161B22; border-radius: 8px; padding: 8px 16px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .info-chip .label { color: #6E7681; }
+  .info-chip .value { color: #C9D1D9; font-weight: 500; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: #161B22; border-radius: 12px; padding: 18px; }
+  .card .label { color: #6E7681; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .card .value { color: #C9D1D9; font-size: 28px; font-weight: 700; }
   .card .value.green { color: #22FF88; }
   .card .value.yellow { color: #FFC658; }
   .card .value.red { color: #FF6F6F; }
-  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .card .sub { font-size: 12px; color: #6E7681; margin-top: 4px; }
+
+  .section-title { font-size: 13px; font-weight: 600; color: #C9D1D9; margin-bottom: 12px;
+                   display: flex; align-items: center; gap: 8px; }
+  .section-title .count { background: #21262D; padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+
+  table { width: 100%; border-collapse: collapse; }
   th { color: #6E7681; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
-       text-align: left; padding: 8px 12px; border-bottom: 1px solid #21262D; }
-  td { padding: 10px 12px; border-bottom: 1px solid #21262D; font-size: 14px; }
-  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+       text-align: left; padding: 10px 12px; border-bottom: 1px solid #21262D; }
+  td { padding: 12px; border-bottom: 1px solid #21262D; font-size: 14px; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
   .badge.alive { background: #1A3A2E; color: #22FF88; }
   .badge.dead { background: #3A1A1A; color: #FF6F6F; }
-  .event-list { margin-top: 16px; }
-  .event { padding: 6px 0; border-bottom: 1px solid #21262D; font-size: 13px; display: flex; gap: 8px; }
-  .event .time { color: #6E7681; min-width: 70px; }
+
+  .frame-bar { display: flex; gap: 2px; align-items: flex-end; height: 24px; }
+  .frame-bar .bar { width: 4px; border-radius: 2px; background: #22FF88; min-height: 2px; }
+  .frame-bar .bar.inactive { background: #21262D; }
+
+  .events { margin-top: 8px; max-height: 240px; overflow-y: auto; }
+  .events::-webkit-scrollbar { width: 4px; }
+  .events::-webkit-scrollbar-thumb { background: #21262D; border-radius: 2px; }
+  .event { display: flex; gap: 10px; padding: 7px 4px; border-bottom: 1px solid #21262D; font-size: 13px; align-items: center; }
+  .event .time { color: #6E7681; font-family: monospace; font-size: 12px; min-width: 70px; }
+  .event .icon { font-size: 14px; }
   .event.connect .icon { color: #22FF88; }
   .event.disconnect .icon { color: #FF6F6F; }
-  .event.startup .icon { color: #B5FFDA; }
-  .footer { margin-top: 24px; color: #484F58; font-size: 11px; text-align: center; }
+  .event.identify .icon { color: #B5FFDA; }
+  .event .text { color: #C9D1D9; }
+
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #21262D;
+            color: #484F58; font-size: 11px; text-align: center; display: flex; justify-content: center; gap: 16px; }
+
+  @media (max-width: 600px) {
+    body { padding: 12px; }
+    .grid { grid-template-columns: 1fr 1fr; }
+    td:nth-child(3), th:nth-child(3) { display: none; }
+  }
 </style>
 </head>
 <body>
-  <h1>MotoMesh Relay</h1>
-  <div class="subtitle" id="subtitle">Loading...</div>
+  <div class="header">
+    <div class="logo">◉</div>
+    <h1>MotoMesh Relay</h1>
+    <span class="status-badge" id="statusBadge">● Running</span>
+  </div>
 
-  <div class="grid" id="statsGrid">
-    <div class="card"><div class="label">Riders Online</div><div class="value green" id="riderCount">0</div></div>
-    <div class="card"><div class="label">Frames Received</div><div class="value" id="rxTotal">0</div></div>
-    <div class="card"><div class="label">Frames Sent</div><div class="value" id="txTotal">0</div></div>
-    <div class="card"><div class="label">Uptime</div><div class="value" id="uptime">0s</div></div>
+  <div class="server-info" id="serverInfo"></div>
+
+  <div class="grid">
+    <div class="card"><div class="label">Riders</div><div class="value green" id="riderCount">0</div><div class="sub" id="riderList">waiting for connections</div></div>
+    <div class="card"><div class="label">RX Frames</div><div class="value" id="rxTotal">0</div><div class="sub" id="rxRate">0/s</div></div>
+    <div class="card"><div class="label">TX Frames</div><div class="value" id="txTotal">0</div><div class="sub" id="txRate">0/s</div></div>
+    <div class="card"><div class="label">Uptime</div><div class="value" id="uptime">0s</div><div class="sub" id="uptimeSub">started just now</div></div>
   </div>
 
   <div class="card">
-    <div class="label">Connected Riders</div>
-    <div id="ridersTable"><p style="color:#6E7681;padding:12px 0">No riders connected.</p></div>
+    <div class="section-title">Connected Riders <span class="count" id="riderCountBadge">0</span></div>
+    <div id="ridersTable"><p style="color:#6E7681;padding:12px 0">No riders connected. Open the app on your phone and tap Connect.</p></div>
   </div>
 
   <div class="card" style="margin-top:12px">
-    <div class="label">Recent Events</div>
-    <div class="event-list" id="eventList"><p style="color:#6E7681;padding:8px 0">No events yet.</p></div>
+    <div class="section-title">Event Log</div>
+    <div class="events" id="eventList"><p style="color:#6E7681;padding:8px 0">Waiting for activity…</p></div>
   </div>
 
-  <div class="footer">MotoMesh Relay Server — data refreshes every 2s</div>
+  <div class="footer">
+    <span>MotoMesh Relay v0.3.0</span>
+    <span>Refreshes every 2s</span>
+    <span>Dashboard: port 8080 · Relay: port 60005</span>
+  </div>
 
 <script>
+let prevRx = 0, prevTx = 0;
+
 async function refresh() {
   try {
     const r = await fetch('/api/stats');
     const d = await r.json();
+    const now = Date.now();
 
-    document.getElementById('subtitle').textContent =
-      `Relay on ${d.relay_host}:${d.relay_port} · ${d.status}`;
+    // Status badge
+    document.getElementById('statusBadge').textContent = '● ' + d.status;
 
+    // Server info chips
+    const info = document.getElementById('serverInfo');
+    info.innerHTML = `
+      <div class="info-chip"><span class="label">Relay</span><span class="value">${d.relay_host}:${d.relay_port}</span></div>
+      <div class="info-chip"><span class="label">Dashboard</span><span class="value">${window.location.hostname}:8080</span></div>
+      <div class="info-chip"><span class="label">Uptime</span><span class="value">${fmtDuration(d.uptime_sec)}</span></div>
+      <div class="info-chip"><span class="label">Frame Rate</span><span class="value" id="fpsChip">—</span></div>
+    `;
+
+    // Rates
+    const rxRate = d.rx_total - prevRx;
+    const txRate = d.tx_total - prevTx;
+    prevRx = d.rx_total;
+    prevTx = d.tx_total;
+    document.getElementById('rxRate').textContent = rxRate + '/s';
+    document.getElementById('txRate').textContent = txRate + '/s';
+    const fpsEl = document.getElementById('fpsChip');
+    if (fpsEl) fpsEl.textContent = (rxRate + txRate) + ' fps';
+
+    // Cards
     document.getElementById('riderCount').textContent = d.rider_count;
+    document.getElementById('riderCountBadge').textContent = d.rider_count;
     document.getElementById('rxTotal').textContent = d.rx_total.toLocaleString();
     document.getElementById('txTotal').textContent = d.tx_total.toLocaleString();
 
     const u = d.uptime_sec;
-    const hrs = Math.floor(u / 3600);
-    const mins = Math.floor((u % 3600) / 60);
-    const secs = u % 60;
-    document.getElementById('uptime').textContent =
-      hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m ${secs}s`;
+    document.getElementById('uptime').textContent = fmtDuration(u);
+    const startDate = new Date(now - u * 1000);
+    document.getElementById('uptimeSub').textContent = 'since ' + startDate.toLocaleTimeString();
+
+    // Rider list subtitle
+    const riderNames = d.riders.filter(r => r.node_id !== null).map(r => '#' + r.node_id).join(', ');
+    document.getElementById('riderList').textContent = riderNames || 'waiting for connections';
 
     // Riders table
     const rt = document.getElementById('ridersTable');
     if (d.riders.length === 0) {
-      rt.innerHTML = '<p style="color:#6E7681;padding:12px 0">No riders connected.</p>';
+      rt.innerHTML = '<p style="color:#6E7681;padding:16px 0">No riders connected. Open the app on your phone and tap Connect.</p>';
     } else {
-      let html = `<table><tr><th>Node ID</th><th>IP</th><th>Duration</th><th>RX</th><th>TX</th><th>Status</th></tr>`;
+      let html = `<table><tr><th>Node</th><th>IP</th><th>Duration</th><th>RX</th><th>TX</th><th>FPS</th><th>Status</th></tr>`;
       for (const r of d.riders) {
         const alive = r.alive && r.node_id !== null;
-        const id = r.node_id !== null ? r.node_id : '—';
+        const id = r.node_id !== null ? '#' + r.node_id : '—';
         const dur = fmtDuration(r.connected_sec);
-        const status = alive ? '<span class="badge alive">Alive</span>' : '<span class="badge dead">Idle</span>';
-        html += `<tr><td><b>${id}</b></td><td>${r.ip}</td><td>${dur}</td><td>${r.rx}</td><td>${r.tx}</td><td>${status}</td></tr>`;
+        const status = alive ? '<span class="badge alive">Live</span>' : '<span class="badge dead">Idle</span>';
+        const fps = r.rx > 0 ? Math.round(r.rx / Math.max(r.connected_sec, 1)) : 0;
+        html += `<tr><td><b>${id}</b></td><td style="color:#6E7681;font-size:13px">${r.ip}</td><td>${dur}</td><td>${r.rx}</td><td>${r.tx}</td><td>${fps}/s</td><td>${status}</td></tr>`;
       }
       html += '</table>';
       rt.innerHTML = html;
@@ -348,27 +420,28 @@ async function refresh() {
     // Events
     const el = document.getElementById('eventList');
     if (d.events.length === 0) {
-      el.innerHTML = '<p style="color:#6E7681;padding:8px 0">No events yet.</p>';
+      el.innerHTML = '<p style="color:#6E7681;padding:8px 0">Waiting for activity…</p>';
     } else {
       let html = '';
-      for (const e of d.events.slice().reverse()) {
+      for (const e of d.events.slice().reverse().slice(0, 40)) {
         const ts = new Date(e.t * 1000).toLocaleTimeString();
-        const icon = e.kind === 'connect' ? '➕' : e.kind === 'disconnect' ? '➖' : '🚀';
-        html += `<div class="event ${e.kind}"><span class="time">${ts}</span><span class="icon">${icon}</span><span>${e.text}</span></div>`;
+        const icon = e.kind === 'connect' ? '➕' : e.kind === 'disconnect' ? '➖' : e.kind === 'identify' ? '🔗' : '🚀';
+        html += `<div class="event ${e.kind}"><span class="time">${ts}</span><span class="icon">${icon}</span><span class="text">${e.text}</span></div>`;
       }
       el.innerHTML = html;
     }
   } catch(e) {
-    document.getElementById('subtitle').textContent = '⚠️ Relay unreachable — retrying...';
+    document.getElementById('statusBadge').textContent = '○ Offline';
+    document.getElementById('riderCount').textContent = '—';
   }
 }
 
 function fmtDuration(s) {
-  if (s < 60) return `${s}s`;
+  if (s < 60) return s + 's';
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ${s % 60}s`;
+  if (m < 60) return m + 'm ' + (s % 60) + 's';
   const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
+  return h + 'h ' + (m % 60) + 'm';
 }
 
 refresh();
