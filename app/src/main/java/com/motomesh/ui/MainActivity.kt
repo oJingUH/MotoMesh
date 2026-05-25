@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
 
     // VOX pulse animation — green transmitter-indicator dot
     private var voxAnim: Animation? = null
+    private var connectPulseAnim: Animation? = null
 
     private fun startVoxPulse() {
         if (voxAnim == null) {
@@ -77,6 +78,44 @@ class MainActivity : ComponentActivity() {
     private fun stopVoxPulse() {
         b.vVox.clearAnimation()
         b.vVox.isVisible = false
+    }
+
+    /** Pulse the Connect button alpha while scanning/connecting. */
+    private fun startConnectPulse() {
+        if (connectPulseAnim == null) {
+            connectPulseAnim = AnimationUtils.loadAnimation(this, R.anim.connect_pulse)
+        }
+        b.btnConnect.startAnimation(connectPulseAnim)
+    }
+
+    private fun stopConnectPulse() {
+        b.btnConnect.clearAnimation()
+        b.btnConnect.alpha = 1f
+    }
+
+    /** Cycle through transport modes when the mode badge is tapped. */
+    private fun cycleTransportMode() {
+        val modes = TransportMode.values()
+        val nextIdx = (transportMode.ordinal + 1) % modes.size
+        val next = modes[nextIdx]
+        stopCurrentTransport()
+        transportMode = next
+        val toastMsg = when (next) {
+            TransportMode.LOOPBACK -> "Loopback mode — self-test, no network"
+            TransportMode.LORA -> "LoRa BLE mode — pair RYLR993 to connect"
+            TransportMode.CELLULAR -> "Cellular TCP mode — enter relay host in Settings"
+        }
+        Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show()
+        b.tvConnMode.setText(
+            when (next) {
+                TransportMode.LOOPBACK -> R.string.conn_loopback
+                TransportMode.LORA -> R.string.conn_lora
+                TransportMode.CELLULAR -> R.string.conn_cellular_connected
+            }
+        )
+        MotoMeshService.start(this, transport = next)
+        requestPermissions(next)
+        updateConnectButton()
     }
 
     // Permission handle
@@ -181,9 +220,12 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 NodeTable.nodeFlow.collectLatest { snapshot ->
+                    val hasNodes = snapshot.isNotEmpty()
+                    b.nodeList.isVisible = hasNodes
+                    b.tvEmptyState.isVisible = !hasNodes
                     nodeAdapter.submitList(snapshot)
                     val count = snapshot.size
-                    b.tvNodeCount.text = if (count == 1) "1 node" else "$count nodes"
+                    b.tvNodeCount.text = if (count == 1) "1 rider" else "$count riders"
                 }
             }
         }
@@ -211,6 +253,9 @@ class MainActivity : ComponentActivity() {
                         if (state == LoRaDriver.ConnectionState.CONNECTED) R.color.lo_green else R.color.lo_red
                     )
                 )
+                // Pulse button while connecting
+                if (state == LoRaDriver.ConnectionState.CONNECTING) startConnectPulse()
+                else stopConnectPulse()
                 b.tvConnMode.setText(R.string.conn_lora)
                 updateConnectButton()
             }
@@ -247,6 +292,9 @@ class MainActivity : ComponentActivity() {
                         if (state == CellularBridge.CellularState.AVAILABLE) R.color.lo_green else R.color.lo_red
                     )
                 )
+                // Pulse button while connecting
+                if (state == CellularBridge.CellularState.CHECKING) startConnectPulse()
+                else stopConnectPulse()
                 b.tvConnMode.setText(R.string.conn_cellular_connected)
                 updateConnectButton()
             }
@@ -342,6 +390,8 @@ class MainActivity : ComponentActivity() {
         b.btnSettingsIcon.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
+        // Transport mode badge cycles on tap
+        b.tvConnMode.setOnClickListener { cycleTransportMode() }
     }
 
     private fun loadRelayConfig(): Pair<String, Int> {

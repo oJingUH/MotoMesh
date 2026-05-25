@@ -68,6 +68,21 @@
             app:layout_constraintTop_toBottomOf="@id/musicBar"
             tools:listitem="@layout/item_node" />
 
+        <!-- Empty state — shown when no riders are connected -->
+        <TextView
+            android:id="@+id/tvEmptyState"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/empty_rider_list"
+            android:textColor="@color/lo_text_dim"
+            android:textSize="14sp"
+            android:visibility="visible"
+            app:layout_constraintBottom_toTopOf="@id/guideline_bar"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/musicBar" />
+
         <!-- ── guideline_bar: top of the status + control area ────────────── -->
 
         <androidx.constraintlayout.widget.Guideline
@@ -113,13 +128,15 @@
                 android:textColor="@color/lo_red"
                 android:textSize="12sp" />
 
-            <!-- Mode badge: "LOOPBACK" | "LORA" | "CELLULAR" — tinted -->
+            <!-- Mode badge: "LOOPBACK" | "LORA" | "CELLULAR" — tappable to cycle -->
             <TextView
                 android:id="@+id/tvConnMode"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginEnd="14dp"
                 android:background="@drawable/badge_mode_bg"
+                android:clickable="true"
+                android:focusable="true"
                 android:paddingHorizontal="8dp"
                 android:paddingVertical="2dp"
                 android:text="@string/conn_loopback"

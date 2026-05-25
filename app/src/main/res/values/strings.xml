@@ -22,7 +22,7 @@
     <string name="rider_icon_desc">Rider node</string>
     <string name="label_packet_loss_pct" translatable="false">0%</string>
     <string name="hint_rssi" translatable="false">– dBm</string>
-    <string name="hint_nodes" translatable="false">– nodes</string>
+    <string name="hint_nodes" translatable="false">– riders</string>
 
     <!-- ── Settings ────────────────────────────────────────────────────── ▶ -->
     <string name="settings_desc">Settings</string>
@@ -58,6 +58,9 @@
 
     <!-- ── General UI ─────────────────────────────────────────────────── ▶ -->
     <string name="btn_save_settings">Save Settings</string>
+
+    <!-- ── Empty states ───────────────────────────────────────────────▶ -->
+    <string name="empty_rider_list">No riders yet.\nTap Connect to start, or open Settings to configure the transport.</string>
 
     <!-- ── Toast / dialogs ──────────────────────────────────────────────────▶ -->
     <string name="dialog_pick_transport_title">Connect via</string>

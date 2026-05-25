@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse animation for Connect button while scanning/connecting -->
+<set xmlns:android="http://schemas.android.com/apk/res/android"
+    android:repeatMode="reverse"
+    android:interpolator="@android:anim/accelerate_decelerate_interpolator"
+    android:repeatCount="infinite"
+    android:duration="800">
+
+    <alpha
+        android:fromAlpha="0.7"
+        android:toAlpha="1.0" />
+</set>
