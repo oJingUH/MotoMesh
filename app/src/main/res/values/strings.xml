@@ -61,6 +61,40 @@
 
     <!-- ── Empty states ───────────────────────────────────────────────▶ -->
     <string name="empty_rider_list">No riders yet.\nTap Connect to start, or open Settings to configure the transport.</string>
+    <string name="empty_loopback_hint">Loopback mode — mic to speakers.\nUnmute and speak to hear yourself.</string>
+    <string name="empty_lora_hint">1. Pair RYLR993 in Bluetooth (passkey: 123456)\n2. Tap Connect → choose your module\n3. Wait for Connected status\n4. Other riders on this channel appear here</string>
+    <string name="empty_cellular_hint">1. Set relay host &amp; port in Settings → Network\n2. Tap Connect\n3. Other riders on the same relay appear here</string>
+    <string name="help_title">How MotoMesh Works</string>
+    <string name="help_loopback_title">Loopback Mode</string>
+    <string name="help_loopback_body">Your microphone feeds directly to your headphones. No network, no hardware needed. Use this to test audio quality and latency.</string>
+    <string name="help_lora_title">LoRa Mode</string>
+    <string name="help_lora_body">Requires a RYLR993 LoRa module paired via Bluetooth.\n\n1. Power the module via USB (use a 3.3V regulator)\n2. Pair in Android Bluetooth: Settings → Bluetooth → scan for \"RYLR993_XXXX\"\n3. Passkey: 123456\n4. In MotoMesh, tap Connect → pick your module\n5. Repeat on each rider\'s phone\n6. All riders on the same channel will be visible here.</string>
+    <string name="help_cellular_title">Cellular Mode</string>
+    <string name="help_cellular_body">No hardware needed. Uses a TCP relay server.\n\n1. Run relay_server.py on any computer: python3 relay_server.py\n2. Note the IP address of that computer\n3. In MotoMesh Settings → Network, enter the IP and port (default 60005)\n4. Tap Connect — audio is relayed through the server to other riders.</string>
+    <string name="help_channel_title">Channels</string>
+    <string name="help_channel_body">Set a channel (0-15) in Settings → Network.\nOnly riders on the same channel can hear each other.\nUse different channels for different ride groups.</string>
+
+    <!-- ── Walkthrough ───────────────────────────────────────────────────▶ -->
+    <string name="walkthrough_title">How to Ride With MotoMesh</string>
+    <string name="walkthrough_skip">Skip</string>
+    <string name="walkthrough_intro">Three ways to connect. Choose what fits your ride.</string>
+    <string name="walkthrough_done">Got it — let\'s ride!</string>
+    <string name="walkthrough_step1_title">1. Pick your transport mode</string>
+    <string name="walkthrough_step1_body">Tap the LOOPBACK badge above to cycle: Loopback (no network) → LoRa (radio) → Cellular (TCP relay). Each mode shows different instructions below.</string>
+    <string name="walkthrough_step2_lora_title">2. For LoRa: pair your module</string>
+    <string name="walkthrough_step2_lora_body">In Android Bluetooth Settings → Pair new device. Look for "RYLR993_XXXX". Passkey is 123456. The app auto-configures everything on connect.</string>
+    <string name="walkthrough_step2_cellular_title">2. For Cellular: set relay address</string>
+    <string name="walkthrough_step2_cellular_body">Open Settings → Network. Enter the relay server\'s IP address and port. Run relay_server.py on any computer on the same network.</string>
+    <string name="walkthrough_step2_loopback_title">2. Loopback: just unmute</string>
+    <string name="walkthrough_step2_loopback_body">No setup needed. Tap the mic icon to unmute. Your voice goes mic → headphones. Great for testing.</string>
+    <string name="walkthrough_step3_title">3. Tap Connect</string>
+    <string name="walkthrough_step3_body">The big green button. In LoRa mode it scans for nearby modules. In Cellular mode it dials the relay server. Watch the status bar turn green when connected.</string>
+    <string name="walkthrough_step4_title">4. See riders appear</string>
+    <string name="walkthrough_step4_body">Each rider on your network/channel appears as a card. Tap a rider to see RSSI, loss rate, and last heard time. The notification shows how many riders are online.</string>
+    <string name="walkthrough_step5_title">5. Adjust audio to taste</string>
+    <string name="walkthrough_step5_body">Open Settings → Audio. Drag VOX threshold higher if music ducks too easily. Drag Duck depth shallower if the volume drop is too harsh. Changes apply instantly.</string>
+    <string name="walkthrough_step6_title">6. Set your channel (LoRa only)</string>
+    <string name="walkthrough_step6_body">In Settings → Network, set a Channel number (0-15). Only riders on the same channel hear each other. Great for splitting ride groups.</string>
 
     <!-- ── Toast / dialogs ──────────────────────────────────────────────────▶ -->
     <string name="dialog_pick_transport_title">Connect via</string>

@@ -68,7 +68,7 @@
             app:layout_constraintTop_toBottomOf="@id/musicBar"
             tools:listitem="@layout/item_node" />
 
-        <!-- Empty state — shown when no riders are connected -->
+        <!-- Empty state — shown when no riders are connected. Tap for help. -->
         <TextView
             android:id="@+id/tvEmptyState"
             android:layout_width="0dp"
@@ -77,6 +77,8 @@
             android:text="@string/empty_rider_list"
             android:textColor="@color/lo_text_dim"
             android:textSize="14sp"
+            android:clickable="true"
+            android:focusable="true"
             android:visibility="visible"
             app:layout_constraintBottom_toTopOf="@id/guideline_bar"
             app:layout_constraintEnd_toEndOf="parent"

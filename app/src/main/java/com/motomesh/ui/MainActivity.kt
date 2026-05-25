@@ -9,10 +9,12 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
+import android.view.View
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
@@ -156,6 +158,10 @@ class MainActivity : ComponentActivity() {
         setupButtons()
         setupSettingsButton()
         observeNodeTable()
+        // Show walkthrough on first launch
+        if (!getSharedPreferences("moto_settings", MODE_PRIVATE).getBoolean("walkthrough_seen", false)) {
+            showWalkthrough()
+        }
         requestPermissions(transportMode)
         MotoMeshService.start(this, transport = transportMode)
         updateConnectButton()
@@ -214,6 +220,90 @@ class MainActivity : ComponentActivity() {
         builder.show()
     }
 
+    // ─── Help dialog ────────────────────────────────────────────
+
+    private fun showHelpDialog() {
+        val modeTitle = when (transportMode) {
+            TransportMode.LOOPBACK -> R.string.help_loopback_title
+            TransportMode.LORA -> R.string.help_lora_title
+            TransportMode.CELLULAR -> R.string.help_cellular_title
+        }
+        val modeBody = when (transportMode) {
+            TransportMode.LOOPBACK -> R.string.help_loopback_body
+            TransportMode.LORA -> R.string.help_lora_body
+            TransportMode.CELLULAR -> R.string.help_cellular_body
+        }
+        val message = """
+            ${getString(modeTitle)}
+            ${getString(modeBody)}
+
+            ${getString(R.string.help_channel_title)}
+            ${getString(R.string.help_channel_body)}
+        """.trimIndent()
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.help_title)
+            .setMessage(message)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
+    // ─── Walkthrough ────────────────────────────────────────────
+
+    /** Show the interactive walkthrough bottom sheet. */
+    private fun showWalkthrough() {
+        val dialog = com.google.android.material.bottomsheet.BottomSheetDialog(this)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_walkthrough, null)
+        dialog.setContentView(view)
+        dialog.dismissWithAnimation = true
+        dialog.show()
+
+        // Populate step cards
+        val stepList = view.findViewById<LinearLayout>(R.id.llWalkthroughSteps)
+        val steps = buildWalkthroughSteps()
+        for ((i, step) in steps.withIndex()) {
+            val card = LayoutInflater.from(this).inflate(R.layout.item_walkthrough_step, stepList, false)
+            card.findViewById<TextView>(R.id.tvStepNumber).text = "${i + 1}"
+            card.findViewById<TextView>(R.id.tvStepTitle).text = step.first
+            card.findViewById<TextView>(R.id.tvStepBody).text = step.second
+            stepList.addView(card)
+        }
+
+        // Dismiss actions
+        view.findViewById<View>(R.id.btnWalkthroughDone).setOnClickListener { dialog.dismiss() }
+        view.findViewById<View>(R.id.tvWalkthroughDismiss).setOnClickListener { dialog.dismiss() }
+
+        // Mark as seen
+        getSharedPreferences("moto_settings", MODE_PRIVATE).edit()
+            .putBoolean("walkthrough_seen", true).apply()
+    }
+
+    /** Build walkthrough steps dynamically — step 2 changes per transport mode. */
+    private fun buildWalkthroughSteps(): List<Pair<String, String>> {
+        val step2 = when (transportMode) {
+            TransportMode.LORA -> Pair(
+                getString(R.string.walkthrough_step2_lora_title),
+                getString(R.string.walkthrough_step2_lora_body)
+            )
+            TransportMode.CELLULAR -> Pair(
+                getString(R.string.walkthrough_step2_cellular_title),
+                getString(R.string.walkthrough_step2_cellular_body)
+            )
+            TransportMode.LOOPBACK -> Pair(
+                getString(R.string.walkthrough_step2_loopback_title),
+                getString(R.string.walkthrough_step2_loopback_body)
+            )
+        }
+        return listOf(
+            Pair(getString(R.string.walkthrough_step1_title), getString(R.string.walkthrough_step1_body)),
+            step2,
+            Pair(getString(R.string.walkthrough_step3_title), getString(R.string.walkthrough_step3_body)),
+            Pair(getString(R.string.walkthrough_step4_title), getString(R.string.walkthrough_step4_body)),
+            Pair(getString(R.string.walkthrough_step5_title), getString(R.string.walkthrough_step5_body)),
+            Pair(getString(R.string.walkthrough_step6_title), getString(R.string.walkthrough_step6_body)),
+        )
+    }
+
     // ─── Node table observer ─────────────────────────────────────────
 
     private fun observeNodeTable() {
@@ -223,6 +313,13 @@ class MainActivity : ComponentActivity() {
                     val hasNodes = snapshot.isNotEmpty()
                     b.nodeList.isVisible = hasNodes
                     b.tvEmptyState.isVisible = !hasNodes
+                    if (!hasNodes) {
+                        b.tvEmptyState.text = when (transportMode) {
+                            TransportMode.LOOPBACK -> getString(R.string.empty_loopback_hint)
+                            TransportMode.LORA -> getString(R.string.empty_lora_hint)
+                            TransportMode.CELLULAR -> getString(R.string.empty_cellular_hint)
+                        }
+                    }
                     nodeAdapter.submitList(snapshot)
                     val count = snapshot.size
                     b.tvNodeCount.text = if (count == 1) "1 rider" else "$count riders"
@@ -392,6 +489,8 @@ class MainActivity : ComponentActivity() {
         }
         // Transport mode badge cycles on tap
         b.tvConnMode.setOnClickListener { cycleTransportMode() }
+        // Tap the empty state to see full help instructions
+        b.tvEmptyState.setOnClickListener { showHelpDialog() }
     }
 
     private fun loadRelayConfig(): Pair<String, Int> {

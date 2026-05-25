@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#0D1117"
+    android:padding="16dp">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="16dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/walkthrough_title"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_blue" />
+
+        <TextView
+            android:id="@+id/tvWalkthroughDismiss"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/walkthrough_skip"
+            android:textSize="12sp"
+            android:textColor="@color/lo_text"
+            android:padding="8dp"
+            android:clickable="true"
+            android:focusable="true" />
+
+    </LinearLayout>
+
+    <!-- Intro blurb -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/walkthrough_intro"
+        android:textSize="13sp"
+        android:textColor="@color/lo_text"
+        android:lineSpacingExtra="2dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Step list -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginBottom="16dp">
+
+        <LinearLayout
+            android:id="@+id/llWalkthroughSteps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </ScrollView>
+
+    <!-- Got it button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnWalkthroughDone"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="@string/walkthrough_done"
+        android:textSize="15sp"
+        app:cornerRadius="10dp"
+        app:backgroundTint="#1A2E24"
+        android:textColor="@color/accent_blue" />
+
+</LinearLayout>
