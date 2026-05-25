@@ -35,7 +35,6 @@ playstore-icon.png
 # IDE
 .idea/
 *.iml
-local.properties
 *.iws
 .navigation/
 captures/
