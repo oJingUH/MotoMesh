@@ -1,51 +1,86 @@
 # Contributing to MotoMesh
 
-Thank you for your interest in contributing. This project is open-source
-because the group-ride communication problem is better solved together.
+Thanks for your interest! MotoMesh is an open-source project, and contributions of all kinds are welcome — code, docs, hardware testing, bug reports.
 
-## How to Help
-
-- Report bugs via GitHub Issues (include device model, Android version, RYLR993 firmware version)
-- Submit PRs — see the branch layout below
-- Improve hardware documentation (more module types, power wiring)
-- Add frequency-plan support for non-EU/US regions
-
-## Branch Layout
-
-| Branch | Purpose |
-|--------|---------|
-| `main` | Stable, passing CI, ready to build |
-| `dev` | Active development: merge here, PRs target here |
-| `v0.x` | Release tags when stable |
-
-## Build & Test
+## Quick Start
 
 ```bash
-# Unit tests (JUnit 4, runs on host JVM)
-./gradlew test
-
-# Instrumented tests (require connected device with BLE enabled)
-./gradlew connectedAndroidTest
-
-# Build debug APK
+git clone https://github.com/oJingUH/MotoMesh.git
+cd MotoMesh
 ./gradlew assembleDebug
-
-# Build signed release APK
-./gradlew assembleRelease
 ```
+
+Install on device:
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Run tests:
+```bash
+./gradlew testDebugUnitTest
+```
+
+## Development Environment
+
+- Android Studio Hedgehog or later
+- JDK 17+ (Android Studio JBR works)
+- Android SDK API 35
+- Physical Android device with USB debugging (emulator won't do BLE)
+
+## Project Structure
+
+| Path | Description |
+|------|-------------|
+| `app/src/main/java/com/motomesh/audio/` | Opus codec, audio pipeline, ducking controller, jitter buffer |
+| `app/src/main/java/com/motomesh/mesh/` | Mesh engine, forwarder, node table |
+| `app/src/main/java/com/motomesh/lora/` | LoRaDriver, RYLR993 BLE GATT driver |
+| `app/src/main/java/com/motomesh/cellular/` | CellularBridge TCP relay transport |
+| `app/src/main/java/com/motomesh/service/` | MotoMeshService foreground service |
+| `app/src/main/java/com/motomesh/ui/` | MainActivity, SettingsActivity, NodeAdapter |
+| `app/src/test/` | Unit tests (MeshForwarder, NodeTable) |
+
+## How to Contribute
+
+### Reporting Bugs
+
+Open a [GitHub Issue](https://github.com/oJingUH/MotoMesh/issues/new?template=bug_report.md) with:
+
+- Android version and device model
+- What you were doing when it broke
+- Full logcat output: `adb logcat -d -s MotoMesh:* > crash.log`
+
+### Feature Requests
+
+Open a [GitHub Issue](https://github.com/oJingUH/MotoMesh/issues/new?template=feature_request.md) describing the use case and why it matters for group rides.
+
+### Code Changes
+
+1. Fork the repo
+2. Create a feature branch (`git checkout -b feat/your-thing`)
+3. Make changes
+4. Run tests (`./gradlew testDebugUnitTest`)
+5. Build the APK (`./gradlew assembleDebug`)
+6. Push and open a Pull Request
+
+### Hardware Testing
+
+The biggest bottleneck is LoRa hardware. If you have a RYLR993 module (or any compatible LoRa BLE module) and want to help:
+
+1. Build the app
+2. Pair the module in Android Bluetooth settings (passkey: `123456`)
+3. Connect in the app
+4. Report: range, latency, packet loss, battery life
+
+See the [README](./README.md) for the full hardware BOM and wiring diagram.
 
 ## Code Style
 
-- Kotlin (target 1.9, JVM 17)
-- No trailing whitespace
-- Functions over comments: write self-documenting code
-- If a doc-block is longer than 4 lines, the function needs refactoring
-- Architecture: audio/, lora/, mesh/, service/, ui/ — keep concerns separated
+- Kotlin, no semicolons
+- 4-space indentation
+- `object` for singletons, constructor injection for testable classes
+- Coroutines + StateFlow for async, no LiveData
+- Document public API with KDoc comments
 
-## Code of Conduct
+## License
 
-Be respectful. This is about safer group rides, not internet argument sport.
-
----
-
-Built with 🏍️ and bad Wi-Fi coverage. MIT licensed.
+By contributing, you agree that your contributions will be licensed under the [MIT License](./LICENSE).

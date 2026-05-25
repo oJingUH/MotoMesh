@@ -90,6 +90,6 @@ obj/
 MotoMesh/.gitignore
 
 # Local JDK configuration
-gradle.properties
+# gradle.properties (committed — contains project-wide settings, no local paths)
 # Local Gradle CLI jars (project-local wrapper)
 lib/
