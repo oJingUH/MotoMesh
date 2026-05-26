@@ -44,10 +44,28 @@ class NodeAdapter(
             // ── Name + callsign ──────────────────────────────────────────
             b.tvNodeId.text = n.displayName
 
-            // ── Voice activity bar (horizontal progress, ~30 px, carrier colour when alive)
+            // ── Callsign sub-label ───────────────────────────────────────
+            if (!n.username.isNullOrBlank()) {
+                b.tvUsername.text = n.username
+                b.tvUsername.isVisible = true
+            } else {
+                b.tvUsername.isVisible = false
+            }
+
+            // ── RSSI under callsign ──────────────────────────────────────
+            b.tvRssi.text = if (n.isAlive) "${n.rssi} dBm" else "—"
+
+            // ── RSSI label (right column) ────────────────────────────────
+            b.tvLabelRssi.text = if (n.isAlive) "${n.rssi} dBm" else "—"
+
+            // ── Packet loss % (right column) ─────────────────────────────
+            b.tvLabelLoss.text = if (n.isAlive) "${(n.lossRate * 100).toInt()}%" else "—"
+
+            // ── Voice activity bar (shows signal quality: 100 - loss%) ───
             if (n.isAlive) {
                 b.pbVoice.isVisible = true
-                b.pbVoice.progress = (n.lossRate * 100).toInt().coerceAtMost(100)
+                val qualityPct = ((1f - n.lossRate) * 100).toInt().coerceIn(0, 100)
+                b.pbVoice.progress = qualityPct
                 val barTint = if (n.lossRate < 0.3f)
                     R.color.pb_good else R.color.pb_bad
                 b.pbVoice.progressTintList =

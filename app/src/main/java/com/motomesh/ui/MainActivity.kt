@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityMainBinding.inflate(layoutInflater)
         setContentView(b.root)
+        b.musicBar.alpha = 0.3f  // dim until voice active
 
         NodeTable.setUsername(
             getSharedPreferences("moto_settings", MODE_PRIVATE)
@@ -507,7 +508,24 @@ class MainActivity : ComponentActivity() {
                 this,
                 if (isMuted) R.color.lo_red else R.color.accent_green
             )
-            if (isMuted) stopVoxPulse() else startVoxPulse()
+            if (isMuted) { stopVoxPulse(); setMusicBarActive(false) }
+            else { startVoxPulse(); setMusicBarActive(true) }
+        }
+    }
+
+    /** Animate the voice-activity bar beneath the title when talking. */
+    private fun setMusicBarActive(active: Boolean) {
+        b.musicBar.progress = if (active) 80 else 0
+        if (active) {
+            b.musicBar.animate()
+                .alpha(1f)
+                .setDuration(200)
+                .start()
+        } else {
+            b.musicBar.animate()
+                .alpha(0.3f)
+                .setDuration(400)
+                .start()
         }
     }
 
