@@ -269,14 +269,17 @@
         <!-- ── Exit app ──────────────────────────────────────────────── -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExitApp"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:layout_marginTop="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginHorizontal="8dp"
             android:text="@string/btn_exit_app"
             android:textColor="@color/lo_red"
-            android:textSize="13sp"
-            app:cornerRadius="8dp" />
+            android:textSize="14sp"
+            app:cornerRadius="8dp"
+            app:backgroundTint="#2A1515"
+            app:strokeColor="@color/lo_red"
+            app:strokeWidth="1dp" />
 
         <!-- ── About ─────────────────────────────────────────────────── -->
         <TextView

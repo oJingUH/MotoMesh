@@ -15,6 +15,7 @@ import com.motomesh.R
 import com.motomesh.databinding.ActivitySettingsBinding
 import com.motomesh.mesh.NodeTable
 import android.view.View
+import android.util.Log
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -250,7 +251,10 @@ class SettingsActivity : AppCompatActivity() {
         // Stop the foreground service (shuts down engine, audio, everything)
         val stopIntent = Intent(this, com.motomesh.service.MotoMeshService::class.java)
         stopService(stopIntent)
-        // Clear all activities and exit
+        Log.i("SettingsActivity", "exitApp: service stopped, finishing activities")
+        // Clear all activities and kill the process — on Android 16,
+        // finishAffinity() alone leaves the app resident in recents/background.
         finishAffinity()
+        android.os.Process.killProcess(android.os.Process.myPid())
     }
 }
