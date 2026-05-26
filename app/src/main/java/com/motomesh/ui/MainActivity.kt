@@ -130,11 +130,11 @@ class MainActivity : ComponentActivity() {
             return@registerForActivityResult
         }
         if (transportMode == TransportMode.CELLULAR) {
-            val relayHost = if (android.os.Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
+            val (relayHost, relayPort) = loadRelayConfig()
             CellularBridge.init(this)
-            CellularBridge.connect(relayHost, 60005)
+            CellularBridge.connect(relayHost, relayPort)
             observeCellular()
-            Log.i("MotoMesh", "permLauncher: CELLULAR perms OK -> connecting to $relayHost:60005")
+            Log.i("MotoMesh", "permLauncher: CELLULAR perms OK -> connecting to $relayHost:$relayPort")
         }
     }
 
@@ -553,7 +553,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun loadRelayConfig(): Pair<String, Int> {
-        val prefs = getSharedPreferences("relay_config", MODE_PRIVATE)
+        val prefs = getSharedPreferences("moto_settings", MODE_PRIVATE)
         val defaultHost = if (android.os.Build.FINGERPRINT.contains("generic")) "10.0.2.2" else "0.0.0.0"
         val host = prefs.getString("relay_host", defaultHost) ?: defaultHost
         val port = prefs.getInt("relay_port", 60005)
