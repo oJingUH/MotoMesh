@@ -44,15 +44,15 @@
                 android:layout_height="wrap_content"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:textColor="@color/lo_text" />
+                android:textColor="@color/accent_blue" />
 
             <TextView
                 android:id="@+id/tvStepBody"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:textSize="12sp"
-                android:textColor="@color/lo_text"
+                android:textSize="13sp"
+                android:textColor="@color/lo_text_dim"
                 android:lineSpacingExtra="2dp" />
 
         </LinearLayout>

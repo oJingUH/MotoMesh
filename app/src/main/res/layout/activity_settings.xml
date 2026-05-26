@@ -61,7 +61,7 @@
                         android:inputType="textPersonName"
                         android:maxLines="1"
                         android:textColor="@color/white"
-                        android:textColorHint="@color/lo_text" />
+                        android:textColorHint="@color/lo_text_dim" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -115,7 +115,7 @@
                         android:inputType="textUri"
                         android:maxLines="1"
                         android:textColor="@color/white"
-                        android:textColorHint="@color/lo_text" />
+                        android:textColorHint="@color/lo_text_dim" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -136,7 +136,7 @@
                         android:inputType="number"
                         android:maxLines="1"
                         android:textColor="@color/white"
-                        android:textColorHint="@color/lo_text" />
+                        android:textColorHint="@color/lo_text_dim" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
@@ -161,7 +161,7 @@
                         android:maxLines="1"
                         android:maxLength="2"
                         android:textColor="@color/white"
-                        android:textColorHint="@color/lo_text" />
+                        android:textColorHint="@color/lo_text_dim" />
 
                 </com.google.android.material.textfield.TextInputLayout>
 
