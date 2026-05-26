@@ -212,7 +212,12 @@ object CellularBridge {
                 // 1. Read fixed-size header
                 var read = 0
                 while (read < FRAME_OVERHEAD) {
-                    val n = input.read(headerBuf, read, FRAME_OVERHEAD - read)
+                    val n = try {
+                        input.read(headerBuf, read, FRAME_OVERHEAD - read)
+                    } catch (e: java.io.IOException) {
+                        Log.w(TAG, "readPump: read error (${e.message})")
+                        -1
+                    }
                     if (n < 0) {
                         Log.w(TAG, "readPump: stream closed by peer")
                         cellularState.value = CellularState.UNAVAILABLE
@@ -234,7 +239,12 @@ object CellularBridge {
                 // 2. Read full payload (nodeId + opus)
                 read = 0
                 while (read < totalPayload) {
-                    val n = input.read(payloadBuf, read, totalPayload - read)
+                    val n = try {
+                        input.read(payloadBuf, read, totalPayload - read)
+                    } catch (e: java.io.IOException) {
+                        Log.w(TAG, "readPump: payload read error (${e.message})")
+                        -1
+                    }
                     if (n < 0) {
                         Log.w(TAG, "readPump: stream closed mid-payload")
                         cellularState.value = CellularState.UNAVAILABLE
