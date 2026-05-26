@@ -36,7 +36,7 @@
         <service
             android:name=".service.MotoMeshService"
             android:exported="false"
-            android:foregroundServiceType="microphone|connectedDevice" />
+            android:foregroundServiceType="microphone" />
 
         <!-- Android Auto — requires Play Store publication + Google review -->
         <meta-data

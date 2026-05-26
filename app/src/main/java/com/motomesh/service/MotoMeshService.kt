@@ -57,7 +57,15 @@ class MotoMeshService : Service() {
             val intent = Intent(context, MotoMeshService::class.java).apply {
                 putExtra(EXTRA_TRANSPORT, transport.name)
             }
-            context.startForegroundService(intent)
+            try {
+                context.startForegroundService(intent)
+            } catch (e: SecurityException) {
+                // Android 16 blocks startForegroundService when app is not visible
+                // (e.g. device locked). Fall back to regular startService and
+                // let onStartCommand retry foreground promotion after a delay.
+                Log.w(TAG, "startForegroundService blocked (device locked?), falling back: ${e.message}")
+                context.startService(intent)
+            }
         }
 
         fun getTransport(): TransportMode = transportMode
@@ -79,12 +87,19 @@ class MotoMeshService : Service() {
 
     private fun promoteForeground() {
         if (foregrounded) return
-        foregrounded = true
-        startInForeground()
-        if (permissionsGranted()) {
-            boot()
-        } else {
-            Log.w(TAG, "Permissions not yet granted — engine will be started when they arrive")
+        try {
+            startInForeground()
+            foregrounded = true
+            if (permissionsGranted()) {
+                boot()
+            } else {
+                Log.w(TAG, "Permissions not yet granted — engine will be started when they arrive")
+            }
+        } catch (e: SecurityException) {
+            // Android 16: startForeground blocked when device is locked.
+            // Retry after 2s — user has usually unlocked by then.
+            Log.w(TAG, "startForeground blocked (locked screen?), retrying in 2s: ${e.message}")
+            android.os.Handler(mainLooper).postDelayed({ promoteForeground() }, 2000)
         }
     }
 

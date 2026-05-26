@@ -164,9 +164,22 @@ class MainActivity : ComponentActivity() {
             showWalkthrough()
         }
         requestPermissions(transportMode)
-        MotoMeshService.start(this, transport = transportMode)
         updateConnectButton()
     }
+
+    override fun onResume() {
+        super.onResume()
+        // Defer foreground-service start to onResume so the activity is
+        // visibly foregrounded — required by Android 16's foreground service
+        // restriction (ForegroundServiceStartNotAllowedException when called
+        // too early in the lifecycle).
+        if (!serviceStarted) {
+            serviceStarted = true
+            MotoMeshService.start(this, transport = transportMode)
+        }
+    }
+
+    private var serviceStarted = false
 
     private fun migrateLegacyRelayPrefs() {
         val prefs = getSharedPreferences("moto_settings", MODE_PRIVATE)
