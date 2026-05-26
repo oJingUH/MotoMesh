@@ -278,7 +278,7 @@ class MainActivity : ComponentActivity() {
             .putBoolean("walkthrough_seen", true).apply()
     }
 
-    /** Build walkthrough steps dynamically — step 2 changes per transport mode. */
+    /** Build walkthrough steps dynamically — steps 2, 3, and 6 change per transport mode. */
     private fun buildWalkthroughSteps(): List<Pair<String, String>> {
         val step2 = when (transportMode) {
             TransportMode.LORA -> Pair(
@@ -294,13 +294,41 @@ class MainActivity : ComponentActivity() {
                 getString(R.string.walkthrough_step2_loopback_body)
             )
         }
+        val step3 = when (transportMode) {
+            TransportMode.LORA -> Pair(
+                getString(R.string.walkthrough_step3_lora_title),
+                getString(R.string.walkthrough_step3_lora_body)
+            )
+            TransportMode.CELLULAR -> Pair(
+                getString(R.string.walkthrough_step3_cellular_title),
+                getString(R.string.walkthrough_step3_cellular_body)
+            )
+            TransportMode.LOOPBACK -> Pair(
+                getString(R.string.walkthrough_step3_loopback_title),
+                getString(R.string.walkthrough_step3_loopback_body)
+            )
+        }
+        val step6 = when (transportMode) {
+            TransportMode.LORA -> Pair(
+                getString(R.string.walkthrough_step6_title),
+                getString(R.string.walkthrough_step6_body)
+            )
+            TransportMode.CELLULAR -> Pair(
+                getString(R.string.walkthrough_step6_cellular_title),
+                getString(R.string.walkthrough_step6_cellular_body)
+            )
+            TransportMode.LOOPBACK -> Pair(
+                getString(R.string.walkthrough_step6_loopback_title),
+                getString(R.string.walkthrough_step6_loopback_body)
+            )
+        }
         return listOf(
             Pair(getString(R.string.walkthrough_step1_title), getString(R.string.walkthrough_step1_body)),
             step2,
-            Pair(getString(R.string.walkthrough_step3_title), getString(R.string.walkthrough_step3_body)),
+            step3,
             Pair(getString(R.string.walkthrough_step4_title), getString(R.string.walkthrough_step4_body)),
             Pair(getString(R.string.walkthrough_step5_title), getString(R.string.walkthrough_step5_body)),
-            Pair(getString(R.string.walkthrough_step6_title), getString(R.string.walkthrough_step6_body)),
+            step6,
         )
     }
 

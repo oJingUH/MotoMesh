@@ -58,6 +58,7 @@
 
     <!-- ── General UI ─────────────────────────────────────────────────── ▶ -->
     <string name="btn_save_settings">Save Settings</string>
+    <string name="btn_exit_app">Exit MotoMesh</string>
 
     <!-- ── Empty states ───────────────────────────────────────────────▶ -->
     <string name="empty_rider_list">No riders yet.\nTap Connect to start, or open Settings to configure the transport.</string>
@@ -95,6 +96,16 @@
     <string name="walkthrough_step5_body">Open Settings → Audio. Drag VOX threshold higher if music ducks too easily. Drag Duck depth shallower if the volume drop is too harsh. Changes apply instantly.</string>
     <string name="walkthrough_step6_title">6. Set your channel (LoRa only)</string>
     <string name="walkthrough_step6_body">In Settings → Network, set a Channel number (0-15). Only riders on the same channel hear each other. Great for splitting ride groups.</string>
+    <string name="walkthrough_step6_loopback_title">6. You\'re all set</string>
+    <string name="walkthrough_step6_loopback_body">Loopback mode is ready to go. Tap the mic icon to unmute and test your audio. No network or hardware needed.</string>
+    <string name="walkthrough_step6_cellular_title">6. Connected by relay</string>
+    <string name="walkthrough_step6_cellular_body">Your audio flows through the TCP relay to all riders on the same server. Make sure everyone points to the same relay host and port.</string>
+    <string name="walkthrough_step3_lora_title">3. Tap Connect — scan for modules</string>
+    <string name="walkthrough_step3_lora_body">The big green button scans for nearby RYLR993 modules over Bluetooth. Pick yours from the list. The app auto-configures frequency, network, and spreading factor.</string>
+    <string name="walkthrough_step3_cellular_title">3. Tap Connect — dial the relay</string>
+    <string name="walkthrough_step3_cellular_body">The big green button opens a TCP socket to your relay server. Make sure relay_server.py is running on that machine before tapping Connect.</string>
+    <string name="walkthrough_step3_loopback_title">3. Tap Connect — no setup needed</string>
+    <string name="walkthrough_step3_loopback_body">In loopback mode, Connect just starts the audio pipeline. No hardware, no network — your voice goes mic to speaker.</string>
 
     <!-- ── Toast / dialogs ──────────────────────────────────────────────────▶ -->
     <string name="dialog_pick_transport_title">Connect via</string>

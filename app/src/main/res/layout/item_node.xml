@@ -14,10 +14,10 @@
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="10dp"
-        android:layout_marginVertical="4dp"
-        app:cardBackgroundColor="#161B22"
-        app:cardCornerRadius="10dp"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginVertical="5dp"
+        app:cardBackgroundColor="@color/card_bg"
+        app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
         app:cardPreventCornerOverlap="false"
         app:cardUseCompatPadding="false">
@@ -27,8 +27,8 @@
             android:layout_height="wrap_content"
             android:minHeight="80dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="12dp"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="14dp"
             android:weightSum="11">
 
             <!-- COLUMN 1 — icon + name + callsign/RSSI  (weight 4) -->
@@ -42,8 +42,8 @@
 
                 <androidx.appcompat.widget.AppCompatImageView
                     android:id="@+id/ivIcon"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
                     android:src="@drawable/ic_rider"
                     android:tint="@color/rider_icon_dim"
                     android:contentDescription="@string/rider_icon_desc" />
@@ -61,7 +61,7 @@
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
                         android:textColor="@color/lo_text"
-                        android:textSize="14sp"
+                        android:textSize="15sp"
                         android:textStyle="bold" />
 
                     <!-- Callsign sub-label — cyan accent, hidden by default; adapter shows/hides -->
@@ -71,7 +71,7 @@
                         android:layout_height="wrap_content"
                         android:textAppearance="@style/TextAppearance.MaterialComponents.Caption"
                         android:textColor="@color/accent_blue"
-                        android:textSize="11sp"
+                        android:textSize="12sp"
                         android:visibility="gone" />
 
                     <!-- RSSI — under callsign; dim grey -->

@@ -51,8 +51,8 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/settings_username_hint"
                     android:textColorHint="@color/lo_text"
-                    app:boxBackgroundColor="#0D1117"
-                    app:boxStrokeColor="@color/lo_blue">
+                    app:boxBackgroundColor="@color/input_bg"
+                    app:boxStrokeColor="@color/lo_text">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etUsername"
@@ -105,8 +105,8 @@
                     android:layout_height="wrap_content"
                     android:hint="@string/settings_relay_host_hint"
                     android:textColorHint="@color/lo_text"
-                    app:boxBackgroundColor="#0D1117"
-                    app:boxStrokeColor="@color/lo_blue">
+                    app:boxBackgroundColor="@color/input_bg"
+                    app:boxStrokeColor="@color/lo_text">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etRelayHost"
@@ -126,8 +126,8 @@
                     android:layout_marginTop="8dp"
                     android:hint="@string/settings_relay_port_hint"
                     android:textColorHint="@color/lo_text"
-                    app:boxBackgroundColor="#0D1117"
-                    app:boxStrokeColor="@color/lo_blue">
+                    app:boxBackgroundColor="@color/input_bg"
+                    app:boxStrokeColor="@color/lo_text">
 
                     <com.google.android.material.textfield.TextInputEditText
                         android:id="@+id/etRelayPort"
@@ -265,6 +265,18 @@
             android:textSize="16sp"
             app:cornerRadius="8dp"
             android:layout_marginHorizontal="8dp" />
+
+        <!-- ── Exit app ──────────────────────────────────────────────── -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExitApp"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/btn_exit_app"
+            android:textColor="@color/lo_red"
+            android:textSize="13sp"
+            app:cornerRadius="8dp" />
 
         <!-- ── About ─────────────────────────────────────────────────── -->
         <TextView

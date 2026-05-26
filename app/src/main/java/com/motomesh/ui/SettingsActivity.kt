@@ -50,6 +50,7 @@ class SettingsActivity : AppCompatActivity() {
 
         b.etUsername.addTextChangedListener(usernameWatcher)
         b.btnSave.setOnClickListener { saveAll() }
+        b.btnExitApp.setOnClickListener { exitApp() }
     }
 
     // ─── Profile ───────────────────────────────────────────────────────
@@ -241,5 +242,15 @@ class SettingsActivity : AppCompatActivity() {
             pi.longVersionCode and 0xFFFFFFFF
         )
         b.tvAbout.text = ver
+    }
+
+    // ─── Exit ───────────────────────────────────────────────────────────
+
+    private fun exitApp() {
+        // Stop the foreground service (shuts down engine, audio, everything)
+        val stopIntent = Intent(this, com.motomesh.service.MotoMeshService::class.java)
+        stopService(stopIntent)
+        // Clear all activities and exit
+        finishAffinity()
     }
 }

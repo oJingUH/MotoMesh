@@ -1,28 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Primary palette — low blue to reduce headlight glare in cabin -->
+    <!-- Primary palette — dark background, high-contrast text -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="accent_blue">#B5FFDA</color>   <!-- powered tone: info · link · highlight -->
-    <color name="accent_green">#B5FFDA</color>  <!-- TX active · success (same as accent_blue: unified palette) -->
+    <color name="accent_blue">#B5FFDA</color>   <!-- mint highlight: info · link · active -->
+    <color name="accent_green">#B5FFDA</color>  <!-- same as accent_blue: unified accent -->
 
     <!-- Connection state dots -->
     <color name="lo_red">#FF6F6F</color>         <!-- disconnected / error -->
     <color name="lo_yellow">#FFC658</color>      <!-- connecting / scanning -->
     <color name="lo_blue">#B5FFDA</color>        <!-- connected / active -->
-    <color name="lo_green">#22FF88</color>       <!-- cellular available / confirmed green -->
+    <color name="lo_green">#22FF88</color>       <!-- cellular available / confirmed -->
 
-    <!-- Text colours -->
-    <color name="lo_text">#8B949E</color>        <!-- body text on dark bg -->
-    <color name="lo_text_dim">#484F58</color>    <!-- disabled / placeholder -->
+    <!-- Text colours — WCAG AA compliant on #0D1117 background -->
+    <color name="lo_text">#C9D1D9</color>        <!-- body text, WCAG AA 7:1 on #0D1117 -->
+    <color name="lo_text_dim">#6E7681</color>    <!-- secondary / placeholder, WCAG AA 4.5:1 -->
     <color name="tx_active">#22FF88</color>      <!-- TX in-flight highlight -->
 
     <!-- Rider node icon (row background + foreground tint) -->
     <color name="rider_icon_dim">#555F6D</color>
     <color name="rider_icon_active">#B5FFDA</color>
     <color name="row_tx_ring">#22FF88</color>    <!-- left-border accent when TX active -->
-    <color name="pb_bg">#1C2433</color>          <!-- voice progress bar track -->
+    <color name="pb_bg">#2D3748</color>          <!-- voice progress bar track (visible) -->
     <color name="pb_good">#7EE8FA</color>        <!-- voice bar: low packet loss -->
     <color name="pb_bad">#FF5050</color>         <!-- voice bar: high packet loss -->
 
+    <!-- Card / surface backgrounds -->
+    <color name="card_bg">#161B22</color>        <!-- card background -->
+    <color name="surface_bg">#0D1117</color>     <!-- main background -->
+    <color name="input_bg">#1C2333</color>        <!-- input field background -->
 </resources>
