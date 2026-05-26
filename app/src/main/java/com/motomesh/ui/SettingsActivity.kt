@@ -248,13 +248,17 @@ class SettingsActivity : AppCompatActivity() {
     // ─── Exit ───────────────────────────────────────────────────────────
 
     private fun exitApp() {
-        // Stop the foreground service (shuts down engine, audio, everything)
+        Log.i("SettingsActivity", "exitApp: stopping service, finishing activities")
+        // Stop the foreground service — triggers onDestroy() which cleans up
         val stopIntent = Intent(this, com.motomesh.service.MotoMeshService::class.java)
         stopService(stopIntent)
-        Log.i("SettingsActivity", "exitApp: service stopped, finishing activities")
-        // Clear all activities and kill the process — on Android 16,
-        // finishAffinity() alone leaves the app resident in recents/background.
+        // Clear all activities from the stack
         finishAffinity()
-        android.os.Process.killProcess(android.os.Process.myPid())
+        // Kill the process via AMS — required on OnePlus where the custom
+        // firmware keeps exited foreground-service processes alive.
+        val am = getSystemService(ACTIVITY_SERVICE) as? android.app.ActivityManager
+        am?.killBackgroundProcesses(packageName)
+        // Hard fallback: immediate JVM termination
+        Runtime.getRuntime().halt(0)
     }
 }

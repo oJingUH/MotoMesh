@@ -21,6 +21,7 @@ import com.motomesh.mesh.MotoMeshEngine
 import com.motomesh.mesh.MotoMeshEngine.TransportMode
 import com.motomesh.audio.DuckingController
 import com.motomesh.audio.AudioPipeline
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
@@ -125,15 +126,18 @@ class MotoMeshService : Service() {
             MotoMeshEngine.stop()
             boot()
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "onDestroy: tearing down service")
         MotoMeshEngine.stop()
         CellularBridge.close()
-        audioPipeline?.stop()   // stops txLoop + rxLoop before releasing resources
+        audioPipeline?.stop()
         audioPipeline = null
         duckingController = null
+        serviceScope.cancel()
+        stopForeground(STOP_FOREGROUND_REMOVE)
         releaseWake()
         super.onDestroy()
     }
