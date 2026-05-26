@@ -698,7 +698,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             LoRaDriver.close()
             MotoMeshEngine.stop()
-            MotoMeshEngine.start(this@MainActivity, lifecycleScope, transport = TransportMode.LORA)
+            stopService(Intent(this@MainActivity, MotoMeshService::class.java))
             updateConnectButton()
             Toast.makeText(this@MainActivity, "Disconnected", Toast.LENGTH_SHORT).show()
             connStateJob?.cancel()
@@ -721,9 +721,10 @@ class MainActivity : ComponentActivity() {
     private fun stopCellular() {
         cellularObserver?.cancel()
         cellularObserver = null
-        Log.i("MainActivity", "stopCellular: closing CellularBridge, resetting state")
+        Log.i("MainActivity", "stopCellular: closing CellularBridge, stopping service")
         CellularBridge.close()
         CellularBridge.cellularState.value = CellularBridge.CellularState.IDLE
+        stopService(Intent(this, MotoMeshService::class.java))
         updateConnectButton()
         Toast.makeText(this@MainActivity, "Cellular disconnected", Toast.LENGTH_SHORT).show()
     }
@@ -760,6 +761,7 @@ class MainActivity : ComponentActivity() {
         cellularObserver = null
         stopVoxPulse()
         voxAnim = null
+        stopService(Intent(this, MotoMeshService::class.java))
         super.onDestroy()
     }
 }
